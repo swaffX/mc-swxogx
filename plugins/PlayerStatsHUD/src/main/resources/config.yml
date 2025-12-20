@@ -1,0 +1,39 @@
+# PlayerStatsHUD Configuration
+# ============================
+
+# HUD Ayarları
+hud:
+  # Varsayılan olarak açık mı?
+  enabled-by-default: true
+  
+  # Güncelleme sıklığı (tick, 20 tick = 1 saniye)
+  update-interval: 20
+  
+  # HUD başlığı
+  title: "&6&l⚡ OYUNCU BİLGİ"
+
+# Gösterilecek Modüller
+modules:
+  health: true          # Can göster
+  hunger: true          # Açlık göster
+  xp: true             # XP göster
+  location: true       # Konum göster
+  playtime: true       # Oynama süresi göster
+  world-time: true     # Dünya zamanı göster
+
+# Renk Ayarları
+colors:
+  health: "&c"         # Kırmızı
+  hunger: "&e"         # Sarı
+  xp: "&a"             # Yeşil
+  location: "&b"       # Açık mavi
+  playtime: "&d"       # Pembe
+  world-time: "&f"     # Beyaz
+  label: "&7"          # Gri
+
+# Mesajlar
+messages:
+  enabled: "&aPlayerStats HUD açıldı!"
+  disabled: "&cPlayerStats HUD kapatıldı!"
+  reload: "&eConfig yeniden yüklendi!"
+  no-permission: "&cBu komutu kullanma izniniz yok!"

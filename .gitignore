@@ -1,0 +1,75 @@
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Minecraft Server Files
+server.jar
+eula.txt
+logs/
+cache/
+crash-reports/
+*.log
+
+# World Files (too large for git)
+world/
+world_nether/
+world_the_end/
+
+# Player Data
+banned-ips.json
+banned-players.json
+ops.json
+usercache.json
+whitelist.json
+
+# Libraries (downloaded automatically)
+libraries/
+versions/
+
+# Compiled Plugin
+plugins/TimeHUD/target/
+plugins/TimeHUD/.idea/
+plugins/TimeHUD/*.iml
+
+# Maven
+**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.backup
+*.old
+*_backup/
+*_old/
+
+# Temporary files
+*.tmp
+*.temp
+~*
+
+# Secrets
+*.key
+*.pem
+management-server-secret
+
+# SSH Keys (GitHub Actions)
+github-actions-key
+github-actions-key.pub

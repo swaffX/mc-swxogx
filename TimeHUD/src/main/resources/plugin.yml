@@ -1,0 +1,16 @@
+name: TimeHUD
+version: 1.0.0
+main: com.server.timehud.TimeHUD
+api-version: 1.21
+author: Server
+description: Oyuncu HUD'unda sunucu saatini gösterir
+commands:
+  timehud:
+    description: Zaman HUD'unu aç/kapat
+    usage: /timehud [aç|kapat]
+    aliases: [zamanHUD, saat]
+    permission: timehud.toggle
+permissions:
+  timehud.toggle:
+    description: Zaman HUD'unu açma/kapatma izni
+    default: true

@@ -1,0 +1,15 @@
+name: TimeHUD
+version: 1.0.0
+main: com.server.timehud.TimeHUD
+api-version: 1.21
+author: Server
+description: Displays server time on player HUD
+commands:
+  timehud:
+    description: Toggle time HUD
+    usage: /timehud [on|off]
+    permission: timehud.toggle
+permissions:
+  timehud.toggle:
+    description: Toggle time HUD display
+    default: true

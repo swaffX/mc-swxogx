@@ -1,0 +1,21 @@
+name: PlayerStatsHUD
+version: 1.0.0
+main: com.server.playerstats.PlayerStatsHUD
+api-version: 1.21
+author: Server
+description: Oyuncu istatistiklerini gösteren HUD plugin
+
+commands:
+  playerhud:
+    description: Oyuncu HUD'unu yönet
+    usage: /playerhud [aç|kapat|reload]
+    aliases: [phud, statshud]
+    permission: playerstats.use
+
+permissions:
+  playerstats.use:
+    description: PlayerStats HUD kullanma izni
+    default: true
+  playerstats.admin:
+    description: Admin komutları
+    default: op
