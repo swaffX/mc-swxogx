@@ -57,13 +57,33 @@ app.get('/api/players', (req, res) => {
   }
 });
 
-// Sunucu başlat
+// Sunucu başlat (duplicate kontrolü ile)
 app.post('/api/start', (req, res) => {
-  exec('pm2 start minecraft', (error, stdout, stderr) => {
+  // Önce sunucu durumunu kontrol et
+  exec('pm2 jlist', (error, stdout) => {
     if (error) {
       return res.status(500).json({ success: false, error: error.message });
     }
-    res.json({ success: true, message: 'Server starting...' });
+    
+    try {
+      const processes = JSON.parse(stdout);
+      const minecraft = processes.find(p => p.name === 'minecraft');
+      
+      // Zaten çalışıyorsa başlatma
+      if (minecraft && minecraft.pm2_env.status === 'online') {
+        return res.json({ success: false, message: 'Sunucu zaten çalışıyor!' });
+      }
+      
+      // Çalışmıyorsa başlat
+      exec('pm2 start minecraft', (err, out, stderr) => {
+        if (err) {
+          return res.status(500).json({ success: false, error: err.message });
+        }
+        res.json({ success: true, message: 'Sunucu başlatılıyor...' });
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: 'Parse error' });
+    }
   });
 });
 
@@ -77,13 +97,29 @@ app.post('/api/stop', (req, res) => {
   });
 });
 
-// Sunucu restart
+// Sunucu restart (lock temizleme ile)
 app.post('/api/restart', (req, res) => {
-  exec('pm2 restart minecraft', (error, stdout, stderr) => {
-    if (error) {
-      return res.status(500).json({ success: false, error: error.message });
-    }
-    res.json({ success: true, message: 'Server restarting...' });
+  // Önce durdur, lock temizle, sonra başlat
+  exec('pm2 stop minecraft', (err1) => {
+    // Lock dosyalarını temizle
+    const lockFiles = [
+      '/opt/minecraft/world/session.lock',
+      '/opt/minecraft/world_nether/session.lock',
+      '/opt/minecraft/world_the_end/session.lock'
+    ];
+    lockFiles.forEach(f => {
+      try { fs.unlinkSync(f); } catch(e) {}
+    });
+    
+    // 2 saniye bekle ve başlat
+    setTimeout(() => {
+      exec('pm2 start minecraft', (err2, out, stderr) => {
+        if (err2) {
+          return res.status(500).json({ success: false, error: err2.message });
+        }
+        res.json({ success: true, message: 'Sunucu yeniden başlatılıyor...' });
+      });
+    }, 2000);
   });
 });
 
