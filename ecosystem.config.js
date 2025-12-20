@@ -4,8 +4,8 @@ module.exports = {
       name: 'minecraft',
       script: 'java',
       args: [
-        '-Xms4G',
-        '-Xmx7G',
+        '-Xms2G',
+        '-Xmx6G',
         '-XX:+UseG1GC',
         '-XX:+ParallelRefProcEnabled',
         '-XX:MaxGCPauseMillis=200',
@@ -33,7 +33,7 @@ module.exports = {
       cwd: '/opt/minecraft',
       autorestart: true,
       watch: false,
-      max_memory_restart: '7G',
+      max_memory_restart: '6G',
       env: {
         NODE_ENV: 'production'
       }
