@@ -59,7 +59,7 @@ app.get('/api/players', (req, res) => {
 
 // Sunucu başlat
 app.post('/api/start', (req, res) => {
-  exec('pm2 start ecosystem.config.js', (error, stdout, stderr) => {
+  exec('pm2 start minecraft', (error, stdout, stderr) => {
     if (error) {
       return res.status(500).json({ success: false, error: error.message });
     }
