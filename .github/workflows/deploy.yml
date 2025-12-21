@@ -10,6 +10,8 @@ on:
       - 'docs/**'
       - 'data/**'
       - 'deploy-roles.sh'
+      - 'restart-minecraft.sh'
+      - 'fix-pm2-startup.sh'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -27,16 +29,17 @@ jobs:
           echo "📦 Creating deployment archive..."
           mkdir -p data
           tar -czf deploy.tar.gz \
-              --exclude='node_modules' \
-              --exclude='.git' \
-              --exclude='data/*.json' \
               server.js \
               package.json \
               public/ \
               docs/ \
               data/ \
               deploy-roles.sh \
-              restart-minecraft.sh
+              restart-minecraft.sh \
+              fix-pm2-startup.sh \
+              --exclude='node_modules' \
+              --exclude='.git' \
+              --exclude='data/*.json'
           ls -lh deploy.tar.gz
       
       - name: 📤 Upload to VPS
@@ -73,6 +76,7 @@ jobs:
             echo "🔧 Setting executable permissions..."
             chmod +x deploy-roles.sh 2>/dev/null || true
             chmod +x restart-minecraft.sh 2>/dev/null || true
+            chmod +x fix-pm2-startup.sh 2>/dev/null || true
             
             # Create data directory if not exists
             echo "📁 Ensuring data directory..."
