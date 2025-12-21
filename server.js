@@ -343,7 +343,20 @@ app.get('/api/stats/history', (req, res) => {
   res.json(statsHistory);
 });
 
-app.listen(PORT, () => {
+// Port kullanımda mı kontrol et
+const server = app.listen(PORT, () => {
   console.log(`🚀 Minecraft Server Manager API running on port ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} kullanımda! 5 saniye sonra tekrar denenecek...`);
+    setTimeout(() => {
+      server.close();
+      server.listen(PORT);
+    }, 5000);
+  } else {
+    console.error('Server error:', err);
+  }
 });
