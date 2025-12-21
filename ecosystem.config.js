@@ -32,9 +32,13 @@ module.exports = {
         'nogui'
       ],
       cwd: '/opt/minecraft',
-      autorestart: true,
+      autorestart: false,  // Manuel restart gerekli (session lock sorunu için)
       watch: false,
       max_memory_restart: '6G',
+      max_restarts: 3,  // Maksimum 3 restart denemesi
+      min_uptime: '10s',  // En az 10 saniye çalışmalı
+      restart_delay: 5000,  // Restart arası 5 saniye bekle
+      kill_timeout: 5000,  // Process'i kapatmak için 5 saniye bekle
       env: {
         NODE_ENV: 'production'
       }
