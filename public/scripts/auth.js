@@ -51,7 +51,7 @@ async function initFirebase() {
                     
                     showToast('Welcome, ' + user.displayName + '!', 'success');
                     setTimeout(() => {
-                        window.location.href = '/checking.html';
+                        window.location.href = 'checking.html';
                     }, 1000);
                 } else {
                     // Yetkisiz kullanıcı, bilgileri kaydet ve access denied sayfasına yönlendir
@@ -66,7 +66,7 @@ async function initFirebase() {
                     hideLoading();
                     
                     // Access denied sayfasına yönlendir
-                    window.location.href = '/access-denied.html';
+                    window.location.href = 'access-denied.html';
                 }
             } else {
                 hideLoading();

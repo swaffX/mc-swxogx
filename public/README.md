@@ -1,58 +1,60 @@
 # 🎨 Web Panel - Public Folder Structure
 
-## 📁 Folder Organization
+## 📁 Organized Folder Structure
 
 ```
 public/
-├── middleware/          # Backend authentication
-│   └── auth.js         # Firebase auth + whitelist (UID verification)
+├── middleware/          # 🔐 Backend authentication
+│   └── auth.js         # Firebase Admin + UID whitelist
 │
-├── assets/             # Static assets
-│   └── favicon.ico     # Site icon
+├── pages/              # 📄 HTML pages
+│   ├── login.html      # 🔐 Login page (Google OAuth)
+│   ├── checking.html   # ⏳ Verification page
+│   ├── access-denied.html # 🚫 Access denied page
+│   ├── dashboard.html  # 🎮 Main dashboard (NEW - purple theme)
+│   ├── index.html      # 📊 Legacy panel
+│   ├── admin.html      # 👑 Admin panel (legacy)
+│   └── test.html       # 🧪 Test page
 │
-├── styles/             # CSS files
+├── styles/             # 🎨 CSS files
 │   ├── login.css       # Login page styles
-│   ├── dashboard.css   # Dashboard styles (purple theme)
+│   ├── dashboard.css   # Dashboard styles (purple-pink theme)
 │   └── styles.css      # Legacy panel styles
 │
-├── scripts/            # JavaScript files
+├── scripts/            # ⚙️ JavaScript files
 │   ├── auth.js         # Firebase authentication logic
 │   ├── dashboard.js    # Dashboard functionality (role manager, player heads)
 │   └── app.js          # Legacy panel functionality
 │
-└── pages/              # HTML pages
-    ├── login.html      # 🔐 Login page (Google OAuth)
-    ├── checking.html   # ⏳ Verification page
-    ├── access-denied.html # 🚫 Access denied page
-    ├── dashboard.html  # 🎮 Main dashboard (NEW - purple theme)
-    ├── index.html      # 📊 Legacy panel
-    ├── admin.html      # 👑 Admin panel (legacy)
-    └── test.html       # 🧪 Test page
+├── assets/             # 🖼️ Static assets
+│   └── favicon.ico     # Site icon
+│
+└── README.md           # 📖 This file
 ```
 
 ## 🔗 Page References & Flow
 
 ### Authentication Flow
 ```
-login.html → checking.html → dashboard.html
+pages/login.html → pages/checking.html → pages/dashboard.html
      ↓
-access-denied.html (if not authorized)
+pages/access-denied.html (if not authorized)
 ```
 
 ### Page Details
 
-#### 🔐 `login.html`
+#### 🔐 `pages/login.html`
 - **Purpose:** Google OAuth login
-- **CSS:** `login.css`
-- **JS:** `auth.js`
+- **CSS:** `styles/login.css`
+- **JS:** `scripts/auth.js`
 - **Features:**
   - Google Sign-In button
   - Glassmorphism design
   - Firebase authentication
   - Whitelist check
-- **Redirects to:** `checking.html` or `access-denied.html`
+- **Redirects to:** `pages/checking.html` or `pages/access-denied.html`
 
-#### ⏳ `checking.html`
+#### ⏳ `pages/checking.html`
 - **Purpose:** Verification animation
 - **CSS:** Inline styles
 - **JS:** Inline script
@@ -61,9 +63,9 @@ access-denied.html (if not authorized)
   - Token check
   - Role verification
   - Auto-redirect (1.5s)
-- **Redirects to:** `dashboard.html`
+- **Redirects to:** `pages/dashboard.html`
 
-#### 🚫 `access-denied.html`
+#### 🚫 `pages/access-denied.html`
 - **Purpose:** Unauthorized access page
 - **CSS:** Inline styles
 - **JS:** Inline script
@@ -74,10 +76,10 @@ access-denied.html (if not authorized)
   - Auto-redirect to login (10s)
 - **Data:** Uses localStorage
 
-#### 🎮 `dashboard.html` (NEW - Main Panel)
+#### 🎮 `pages/dashboard.html` (NEW - Main Panel)
 - **Purpose:** Modern dashboard with sidebar navigation
-- **CSS:** `dashboard.css`
-- **JS:** `dashboard.js`
+- **CSS:** `styles/dashboard.css`
+- **JS:** `scripts/dashboard.js`
 - **Features:**
   - Purple-pink gradient theme
   - Sidebar navigation (collapsible)
@@ -96,10 +98,10 @@ access-denied.html (if not authorized)
   - `POST /api/server/restart` - Restart server
   - `POST /api/command` - Send console command
 
-#### 📊 `index.html` (Legacy Panel)
+#### 📊 `pages/index.html` (Legacy Panel)
 - **Purpose:** Old dashboard
-- **CSS:** `styles.css`
-- **JS:** `app.js`
+- **CSS:** `styles/styles.css`
+- **JS:** `scripts/app.js`
 - **Features:**
   - Server status
   - Player list
@@ -108,23 +110,23 @@ access-denied.html (if not authorized)
   - Charts
 - **Status:** Still functional, kept for backup
 
-#### 👑 `admin.html` (Legacy)
+#### 👑 `pages/admin.html` (Legacy)
 - **Purpose:** Old admin panel
 - **Status:** Legacy, not actively used
 
-#### 🧪 `test.html`
+#### 🧪 `pages/test.html`
 - **Purpose:** Testing page
 - **Status:** Development only
 
 ## 🎨 CSS Files
 
-### `login.css`
+### `styles/login.css`
 - Login page styles
 - Glassmorphism effects
 - Google button styling
 - Responsive design
 
-### `dashboard.css`
+### `styles/dashboard.css`
 - **Theme:** Purple-pink gradient
 - **Variables:**
   - `--primary: #8b5cf6` (Purple)
@@ -139,14 +141,14 @@ access-denied.html (if not authorized)
   - Role cards
   - Player avatars
 
-### `styles.css`
+### `styles/styles.css`
 - Legacy panel styles
 - Blue theme
 - Old card designs
 
 ## 📜 JavaScript Files
 
-### `auth.js`
+### `scripts/auth.js`
 - **Purpose:** Firebase authentication
 - **Features:**
   - Firebase SDK initialization
@@ -157,7 +159,7 @@ access-denied.html (if not authorized)
 - **Whitelist:** `P2xHD09hwFaXf6Ci2RE4zlZYYnc2`
 - **Storage:** localStorage (authToken, userEmail, userName, userRole, userUID)
 
-### `dashboard.js`
+### `scripts/dashboard.js`
 - **Purpose:** Dashboard functionality
 - **Features:**
   - Page navigation
@@ -175,10 +177,16 @@ access-denied.html (if not authorized)
   - Permission management
 - **Player Heads:** `https://mc-heads.net/avatar/{username}/{size}`
 
-### `app.js`
+### `scripts/app.js`
 - Legacy panel functionality
 - Old API calls
 - Chart.js integration
+
+## 🖼️ Assets
+
+### `assets/favicon.ico`
+- Site icon (16x16, 32x32, 48x48)
+- Shows in browser tab
 
 ## 🔐 Middleware
 
@@ -202,25 +210,25 @@ access-denied.html (if not authorized)
 
 ### For Development
 1. All frontend files are in `public/`
-2. Edit HTML in `pages/` (or root for now)
-3. Edit CSS in `styles/` (or root for now)
-4. Edit JS in `scripts/` (or root for now)
+2. Edit HTML in `pages/`
+3. Edit CSS in `styles/`
+4. Edit JS in `scripts/`
 5. Middleware stays in `middleware/`
 
 ### For Production (VPS)
 1. `git pull origin main`
-2. Ensure `middleware/auth.js` exists
+2. Ensure `public/middleware/auth.js` exists
 3. `pm2 restart server`
-4. Access: `http://your-ip:3000/login.html`
+4. Access: `http://your-ip:3000/pages/login.html`
 
 ## 🚀 Quick Start
 
 ### Login Flow
-1. Go to `/login.html`
+1. Go to `/pages/login.html`
 2. Click "Sign in with Google"
 3. Authenticate with Google
-4. If authorized → `/checking.html` → `/dashboard.html`
-5. If not authorized → `/access-denied.html`
+4. If authorized → `/pages/checking.html` → `/pages/dashboard.html`
+5. If not authorized → `/pages/access-denied.html`
 
 ### Dashboard Features
 - **Dashboard:** Server stats, control, online players
@@ -242,7 +250,7 @@ access-denied.html (if not authorized)
 ## 🔧 Configuration
 
 ### Add User to Whitelist
-Edit `auth.js` and `middleware/auth.js`:
+Edit `scripts/auth.js` and `middleware/auth.js`:
 ```javascript
 const AUTHORIZED_UIDS = [
     "P2xHD09hwFaXf6Ci2RE4zlZYYnc2", // Admin
@@ -251,7 +259,7 @@ const AUTHORIZED_UIDS = [
 ```
 
 ### Change Theme Colors
-Edit `dashboard.css`:
+Edit `styles/dashboard.css`:
 ```css
 :root {
     --primary: #8b5cf6;  /* Purple */
@@ -260,9 +268,9 @@ Edit `dashboard.css`:
 ```
 
 ### Add New Page
-1. Create HTML in `public/`
-2. Add nav item in `dashboard.html`
-3. Add content function in `dashboard.js`
+1. Create HTML in `public/pages/`
+2. Add nav item in `pages/dashboard.html`
+3. Add content function in `scripts/dashboard.js`
 4. Add initialization in `loadPage()`
 
 ## 🎉 Current Status
