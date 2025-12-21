@@ -1,0 +1,13 @@
+{
+  "name": "swxoqx-discord-bot",
+  "version": "1.0.0",
+  "description": "SWXOQX Minecraft Sunucu Discord Botu",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "gamedig": "^5.1.0"
+  }
+}

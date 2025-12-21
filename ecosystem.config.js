@@ -52,6 +52,18 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3000
       }
+    },
+    {
+      name: 'discord-bot',
+      script: './bot.js',
+      cwd: '/opt/minecraft/discord-bot',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '200M',
+      env: {
+        NODE_ENV: 'production',
+        DISCORD_TOKEN: 'TOKEN_BURAYA_VPS_TE_AYARLANACAK'
+      }
     }
   ]
 };

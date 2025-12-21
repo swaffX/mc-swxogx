@@ -1,0 +1,12 @@
+{
+  "clientId": "1452118147594190929",
+  "guildId": "",
+  "logChannelId": "",
+  "devLogChannelId": "",
+  "minecraft": {
+    "host": "194.105.5.37",
+    "port": 25565,
+    "rconPort": 25575,
+    "rconPassword": ""
+  }
+}
