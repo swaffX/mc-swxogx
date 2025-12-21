@@ -13,14 +13,22 @@ pm2 stop minecraft
 # 2. 2 saniye bekle
 sleep 2
 
-# 3. Java process'lerini kontrol et
-echo "🔍 Checking for running Java processes..."
-JAVA_PID=$(pgrep -f "java.*server.jar")
+# 3. TÜM Java process'lerini kontrol et ve kapat
+echo "🔍 Checking for ALL running Java processes..."
+JAVA_PIDS=$(pgrep -f "java.*server.jar")
 
-if [ ! -z "$JAVA_PID" ]; then
-    echo "⚠️  Java process still running (PID: $JAVA_PID), killing..."
+if [ ! -z "$JAVA_PIDS" ]; then
+    echo "⚠️  Found Java processes: $JAVA_PIDS"
+    echo "🔪 Killing ALL Java processes..."
     pkill -9 -f "java.*server.jar"
-    sleep 1
+    sleep 2
+    
+    # Tekrar kontrol et
+    REMAINING=$(pgrep -f "java.*server.jar")
+    if [ ! -z "$REMAINING" ]; then
+        echo "⚠️  Some processes still running, force killing..."
+        kill -9 $REMAINING 2>/dev/null
+    fi
 else
     echo "✅ No Java processes found"
 fi
@@ -32,18 +40,26 @@ rm -f world/session.lock 2>/dev/null && echo "   ✓ world/session.lock" || echo
 rm -f world_nether/session.lock 2>/dev/null && echo "   ✓ world_nether/session.lock" || echo "   ✗ world_nether/session.lock (not found)"
 rm -f world_the_end/session.lock 2>/dev/null && echo "   ✓ world_the_end/session.lock" || echo "   ✗ world_the_end/session.lock (not found)"
 
-# 5. 1 saniye bekle
-sleep 1
+# 5. 2 saniye bekle
+sleep 2
 
 # 6. PM2 ile başlat
 echo "▶️  Starting Minecraft via PM2..."
 pm2 start minecraft
 
 # 7. Durum kontrolü
-sleep 2
+sleep 3
 echo ""
-echo "📊 PM2 Status:"
+echo "� PoM2 Status:"
 pm2 list
+
+echo ""
+echo "🔍 Java Processes:"
+ps aux | grep "java.*server.jar" | grep -v grep
+
+echo ""
+echo "🌐 Port 25565 Status:"
+lsof -i :25565 2>/dev/null || echo "   No process listening on port 25565"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
