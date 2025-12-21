@@ -265,27 +265,70 @@ app.post('/api/stop', verifyToken, requireRole('admin'), (req, res) => {
 
 // Sunucu restart (lock temizleme ile) - Moderator+ yetkisi gerekli
 app.post('/api/restart', verifyToken, requireRole('admin', 'moderator'), (req, res) => {
-  // Önce durdur, lock temizle, sonra başlat
+  console.log('🔄 Restart request received (legacy endpoint)...');
+  
+  // Önce durdur
   exec('pm2 stop minecraft', (err1) => {
+    if (err1) {
+      console.error('Stop error:', err1);
+    }
+    
+    console.log('⏸️ Minecraft stopped, cleaning locks...');
+    
     // Lock dosyalarını temizle
     const lockFiles = [
-      '/opt/minecraft/world/session.lock',
-      '/opt/minecraft/world_nether/session.lock',
-      '/opt/minecraft/world_the_end/session.lock'
+      path.join(__dirname, 'world', 'session.lock'),
+      path.join(__dirname, 'world_nether', 'session.lock'),
+      path.join(__dirname, 'world_the_end', 'session.lock')
     ];
+    
     lockFiles.forEach(f => {
-      try { fs.unlinkSync(f); } catch(e) {}
+      try {
+        if (fs.existsSync(f)) {
+          fs.unlinkSync(f);
+          console.log(`🧹 Cleaned: ${f}`);
+        }
+      } catch(e) {
+        console.warn(`⚠️ Could not clean ${f}:`, e.message);
+      }
     });
     
-    // 2 saniye bekle ve başlat
+    // 3 saniye bekle
+    console.log('⏳ Waiting 3 seconds for Java process to exit...');
     setTimeout(() => {
-      exec('pm2 start minecraft', (err2, out, stderr) => {
-        if (err2) {
-          return res.status(500).json({ success: false, error: err2.message });
+      // Java process'lerini kontrol et
+      exec('pgrep -f "java.*server.jar"', (pgrepErr, stdout) => {
+        if (stdout && stdout.trim()) {
+          console.log('⚠️ Java process still running, killing...');
+          exec('pkill -9 -f "java.*server.jar"', (killErr) => {
+            if (killErr) {
+              console.warn('Kill error:', killErr);
+            }
+            setTimeout(startMinecraft, 1000);
+          });
+        } else {
+          startMinecraft();
         }
-        res.json({ success: true, message: 'Sunucu yeniden başlatılıyor...' });
       });
-    }, 2000);
+      
+      function startMinecraft() {
+        console.log('▶️ Starting Minecraft...');
+        exec('pm2 start minecraft', (err2, out, stderr) => {
+          if (err2) {
+            console.error('Start error:', err2);
+            return res.status(500).json({ 
+              success: false, 
+              error: err2.message 
+            });
+          }
+          console.log('✅ Minecraft restarted successfully');
+          res.json({ 
+            success: true, 
+            message: 'Sunucu yeniden başlatılıyor... (30-60 saniye sürebilir)' 
+          });
+        });
+      }
+    }, 3000);
   });
 });
 
@@ -449,24 +492,71 @@ app.post('/api/server/stop', verifyToken, requireRole('admin'), (req, res) => {
 });
 
 app.post('/api/server/restart', verifyToken, requireRole('admin', 'moderator'), (req, res) => {
-  exec('pm2 stop minecraft', () => {
+  console.log('🔄 Restart request received...');
+  
+  // Önce stop et
+  exec('pm2 stop minecraft', (stopErr) => {
+    if (stopErr) {
+      console.error('Stop error:', stopErr);
+    }
+    
+    console.log('⏸️ Minecraft stopped, cleaning locks...');
+    
+    // Lock dosyalarını temizle
     const lockFiles = [
-      '/opt/minecraft/world/session.lock',
-      '/opt/minecraft/world_nether/session.lock',
-      '/opt/minecraft/world_the_end/session.lock'
+      path.join(__dirname, 'world', 'session.lock'),
+      path.join(__dirname, 'world_nether', 'session.lock'),
+      path.join(__dirname, 'world_the_end', 'session.lock')
     ];
+    
     lockFiles.forEach(f => {
-      try { fs.unlinkSync(f); } catch(e) {}
+      try {
+        if (fs.existsSync(f)) {
+          fs.unlinkSync(f);
+          console.log(`🧹 Cleaned: ${f}`);
+        }
+      } catch(e) {
+        console.warn(`⚠️ Could not clean ${f}:`, e.message);
+      }
     });
     
+    // 3 saniye bekle (Java process'in tamamen kapanması için)
+    console.log('⏳ Waiting 3 seconds for Java process to exit...');
     setTimeout(() => {
-      exec('pm2 start minecraft', (err) => {
-        if (err) {
-          return res.status(500).json({ success: false, message: err.message });
+      // Java process'lerini kontrol et ve gerekirse kill et
+      exec('pgrep -f "java.*server.jar"', (pgrepErr, stdout) => {
+        if (stdout && stdout.trim()) {
+          console.log('⚠️ Java process still running, killing...');
+          exec('pkill -9 -f "java.*server.jar"', (killErr) => {
+            if (killErr) {
+              console.warn('Kill error:', killErr);
+            }
+            // 1 saniye daha bekle
+            setTimeout(startMinecraft, 1000);
+          });
+        } else {
+          startMinecraft();
         }
-        res.json({ success: true, message: 'Server is restarting...' });
       });
-    }, 2000);
+      
+      function startMinecraft() {
+        console.log('▶️ Starting Minecraft...');
+        exec('pm2 start minecraft', (startErr, stdout, stderr) => {
+          if (startErr) {
+            console.error('Start error:', startErr);
+            return res.status(500).json({ 
+              success: false, 
+              message: 'Restart failed: ' + startErr.message 
+            });
+          }
+          console.log('✅ Minecraft restarted successfully');
+          res.json({ 
+            success: true, 
+            message: 'Server is restarting... (this may take 30-60 seconds)' 
+          });
+        });
+      }
+    }, 3000);
   });
 });
 
