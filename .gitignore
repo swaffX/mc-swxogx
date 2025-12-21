@@ -73,3 +73,6 @@ management-server-secret
 # SSH Keys (GitHub Actions)
 github-actions-key
 github-actions-key.pub
+
+# Nested git repos
+minecraft-server/
