@@ -79,19 +79,14 @@ public class TimeHUD extends JavaPlugin implements Listener {
             }
         }.runTaskTimer(this, 0L, 20L);
         
+        // Tek seferlik action bar - 3 saniye sonra
         new BukkitRunnable() {
-            int count = 0;
             @Override
             public void run() {
-                if (count < 5) {
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, 
-                        new TextComponent(ChatColor.YELLOW + "⚡ " + ChatColor.WHITE + "SWXOQX Sunucusuna Hoş Geldin! " + ChatColor.YELLOW + "⚡"));
-                    count++;
-                } else {
-                    cancel();
-                }
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, 
+                    new TextComponent(ChatColor.YELLOW + "⚡ " + ChatColor.WHITE + "SWXOQX Sunucusuna Hoş Geldin! " + ChatColor.YELLOW + "⚡"));
             }
-        }.runTaskTimer(this, 60L, 20L);
+        }.runTaskLater(this, 80L);
     }
     
     public boolean isHUDEnabled(Player player) {
