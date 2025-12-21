@@ -79,6 +79,7 @@ const client = new Client({
 let lastPlayers = new Set();
 let serverOnline = false;
 let lastServerStatus = true; // Çöküş bildirimi için
+let liveStatusMessageId = null; // Canlı durum mesajı ID'si
 
 // Slash komutları
 const commands = [
@@ -114,7 +115,8 @@ const commands = [
                 .addChoices(
                     { name: 'Giriş/Çıkış Log', value: 'log' },
                     { name: 'Devlog', value: 'devlog' },
-                    { name: 'Sunucu Durumu', value: 'status' }
+                    { name: 'Sunucu Durumu', value: 'status' },
+                    { name: 'Canlı Bilgi Paneli', value: 'liveinfo' }
                 ))
         .addChannelOption(option =>
             option.setName('kanal')
@@ -171,6 +173,10 @@ client.once('ready', async () => {
     // Oyuncu giriş/çıkış kontrolü
     checkPlayers();
     setInterval(checkPlayers, 15000); // 15 saniyede bir
+    
+    // Canlı bilgi paneli güncelleme
+    updateLiveInfoPanel();
+    setInterval(updateLiveInfoPanel, 30000); // 30 saniyede bir
 });
 
 // Sunucu durumunu güncelle
@@ -281,6 +287,165 @@ async function checkPlayers() {
         lastPlayers = currentPlayers;
     } catch (error) {
         // Sunucu çevrimdışı
+    }
+}
+
+// Minecraft zaman hesaplama
+function getMinecraftTime(ticks) {
+    // Minecraft'ta 1 gün = 24000 tick
+    // 0 = 06:00, 6000 = 12:00, 12000 = 18:00, 18000 = 00:00
+    const adjustedTicks = (ticks + 6000) % 24000;
+    const hours = Math.floor(adjustedTicks / 1000);
+    const minutes = Math.floor((adjustedTicks % 1000) / 16.67);
+    return { hours, minutes };
+}
+
+function getTimePeriod(hours) {
+    if (hours >= 5 && hours < 12) return { emoji: '🌅', text: 'Sabah' };
+    if (hours >= 12 && hours < 17) return { emoji: '☀️', text: 'Öğlen' };
+    if (hours >= 17 && hours < 21) return { emoji: '🌆', text: 'Akşam' };
+    return { emoji: '🌙', text: 'Gece' };
+}
+
+// Canlı bilgi paneli güncelleme
+async function updateLiveInfoPanel() {
+    if (!config.liveInfoChannelId) return;
+    
+    const channel = client.channels.cache.get(config.liveInfoChannelId);
+    if (!channel) return;
+    
+    try {
+        // Sunucu bilgilerini al
+        let serverState = null;
+        let isOnline = false;
+        let playerCount = 0;
+        let maxPlayers = 20;
+        let playerList = [];
+        let version = 'Bilinmiyor';
+        let tpsInfo = { tps1m: 0, tps5m: 0, tps15m: 0 };
+        let mcTime = { hours: 12, minutes: 0 };
+        
+        try {
+            serverState = await GameDig.query({
+                type: 'minecraft',
+                host: config.minecraft.host,
+                port: config.minecraft.port
+            });
+            isOnline = true;
+            playerCount = serverState.players.length;
+            maxPlayers = serverState.maxplayers;
+            playerList = serverState.players.map(p => p.name);
+            version = serverState.version || 'Paper 1.21.1';
+        } catch (e) {
+            isOnline = false;
+        }
+        
+        // TPS ve zaman bilgisi al (RCON)
+        if (isOnline) {
+            try {
+                const tpsResponse = await rcon.send('tps');
+                const match = tpsResponse.match(/(\d+\.?\d*),\s*(\d+\.?\d*),\s*(\d+\.?\d*)/);
+                if (match) {
+                    tpsInfo = {
+                        tps1m: parseFloat(match[1]),
+                        tps5m: parseFloat(match[2]),
+                        tps15m: parseFloat(match[3])
+                    };
+                }
+            } catch (e) {}
+            
+            try {
+                const timeResponse = await rcon.send('time query daytime');
+                const timeMatch = timeResponse.match(/(\d+)/);
+                if (timeMatch) {
+                    mcTime = getMinecraftTime(parseInt(timeMatch[1]));
+                }
+            } catch (e) {}
+        }
+        
+        const timePeriod = getTimePeriod(mcTime.hours);
+        const timeStr = `${mcTime.hours.toString().padStart(2, '0')}:${mcTime.minutes.toString().padStart(2, '0')}`;
+        
+        // TPS durumu
+        const tpsEmoji = tpsInfo.tps1m >= 19 ? '🟢' : tpsInfo.tps1m >= 15 ? '🟡' : '🔴';
+        
+        // Oyuncu listesi
+        const playerListStr = playerList.length > 0 
+            ? playerList.map(p => `\`${p}\``).join(', ')
+            : '*Şu an kimse online değil*';
+        
+        // Progress bar
+        const progressFilled = Math.round((playerCount / maxPlayers) * 10);
+        const progressBar = '█'.repeat(progressFilled) + '░'.repeat(10 - progressFilled);
+        
+        // Embed oluştur
+        const embed = new EmbedBuilder()
+            .setColor(isOnline ? 0x00FF00 : 0xFF0000)
+            .setTitle('⚔️ SwxOgx | Live Craft')
+            .setDescription(isOnline 
+                ? '```ansi\n\u001b[1;32m● SUNUCU ÇEVRİMİÇİ\u001b[0m\n```'
+                : '```ansi\n\u001b[1;31m● SUNUCU ÇEVRİMDIŞI\u001b[0m\n```')
+            .setThumbnail('https://mc-api.net/v3/server/favicon/' + config.minecraft.host)
+            .addFields(
+                { 
+                    name: '📍 Sunucu Adresi', 
+                    value: '```\nswxogx.mooo.com\n```', 
+                    inline: true 
+                },
+                { 
+                    name: '🏷️ Sürüm', 
+                    value: `\`${version}\``, 
+                    inline: true 
+                },
+                { 
+                    name: '🎮 Oyun Modu', 
+                    value: '`Survival`', 
+                    inline: true 
+                },
+                { 
+                    name: `👥 Oyuncular [${playerCount}/${maxPlayers}]`, 
+                    value: `\`${progressBar}\`\n${playerListStr}`, 
+                    inline: false 
+                },
+                { 
+                    name: `${timePeriod.emoji} Oyun İçi Zaman`, 
+                    value: `**${timeStr}** - ${timePeriod.text}`, 
+                    inline: true 
+                },
+                { 
+                    name: `${tpsEmoji} TPS`, 
+                    value: isOnline ? `\`${tpsInfo.tps1m.toFixed(1)}\`` : '`-`', 
+                    inline: true 
+                },
+                { 
+                    name: '⏰ Son Güncelleme', 
+                    value: `<t:${Math.floor(Date.now() / 1000)}:R>`, 
+                    inline: true 
+                }
+            )
+            .setImage('https://api.loohpjames.com/serverbanner.png?ip=swxogx.mooo.com&port=25565')
+            .setFooter({ text: '🔄 Her 30 saniyede güncellenir • TLauncher 1.21.10' })
+            .setTimestamp();
+        
+        // Mesajı güncelle veya yeni oluştur
+        if (config.liveInfoMessageId) {
+            try {
+                const message = await channel.messages.fetch(config.liveInfoMessageId);
+                await message.edit({ embeds: [embed] });
+            } catch (e) {
+                // Mesaj bulunamadı, yeni oluştur
+                const newMessage = await channel.send({ embeds: [embed] });
+                config.liveInfoMessageId = newMessage.id;
+                saveConfig();
+            }
+        } else {
+            // İlk kez oluştur
+            const newMessage = await channel.send({ embeds: [embed] });
+            config.liveInfoMessageId = newMessage.id;
+            saveConfig();
+        }
+    } catch (error) {
+        console.error('Live info panel güncelleme hatası:', error);
     }
 }
 
@@ -575,6 +740,21 @@ client.on('interactionCreate', async interaction => {
                 .setTimestamp();
             
             await interaction.reply({ embeds: [embed] });
+        } else if (tip === 'liveinfo') {
+            config.liveInfoChannelId = kanal.id;
+            config.liveInfoMessageId = null; // Yeni mesaj oluşturulsun
+            saveConfig();
+            
+            const embed = new EmbedBuilder()
+                .setColor(0x00D9FF)
+                .setTitle('✅ Canlı Bilgi Paneli Ayarlandı')
+                .setDescription(`Canlı sunucu bilgileri artık <#${kanal.id}> kanalında gösterilecek.\n\n*İlk güncelleme 30 saniye içinde yapılacak.*`)
+                .setTimestamp();
+            
+            await interaction.reply({ embeds: [embed] });
+            
+            // Hemen güncelle
+            setTimeout(updateLiveInfoPanel, 2000);
         }
     }
 });
