@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const net = require('net');
+const { verifyToken, requireRole, setUserRole, getUserRole } = require('./middleware/auth');
 
 // RCON Client
 class RconClient {
@@ -72,6 +73,65 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// ============================================
+// AUTH ENDPOINTS
+// ============================================
+
+// Kullanıcı kaydı
+app.post('/api/auth/register', verifyToken, async (req, res) => {
+  try {
+    const { username, email } = req.body;
+    
+    // İlk kullanıcı admin olsun
+    const isFirstUser = [...require('./middleware/auth').userRoles.keys()].length === 0;
+    const role = isFirstUser ? 'admin' : 'user';
+    
+    setUserRole(email, role);
+    
+    res.json({
+      success: true,
+      role,
+      message: isFirstUser ? 'İlk kullanıcı olarak admin yetkisi verildi!' : 'Kayıt başarılı!'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Kullanıcı rolü sorgula
+app.get('/api/auth/role', verifyToken, (req, res) => {
+  res.json({ role: req.user.role, email: req.user.email, name: req.user.name });
+});
+
+// Kullanıcı rolü güncelle (sadece admin)
+app.post('/api/auth/set-role', verifyToken, requireRole('admin'), (req, res) => {
+  try {
+    const { email, role } = req.body;
+    
+    if (!email || !role) {
+      return res.status(400).json({ error: 'Email ve rol gerekli' });
+    }
+    
+    setUserRole(email, role);
+    res.json({ success: true, message: `${email} kullanıcısının rolü ${role} olarak güncellendi` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Tüm kullanıcıları listele (sadece admin)
+app.get('/api/auth/users', verifyToken, requireRole('admin'), (req, res) => {
+  const users = Array.from(require('./middleware/auth').userRoles.entries()).map(([email, role]) => ({
+    email,
+    role
+  }));
+  res.json({ users });
+});
+
+// ============================================
+// PROTECTED ENDPOINTS (Authentication Required)
+// ============================================
 
 // Minecraft sunucu durumu
 app.get('/api/status', (req, res) => {
@@ -163,8 +223,8 @@ app.get('/api/players', async (req, res) => {
   }
 });
 
-// Sunucu başlat (duplicate kontrolü ile)
-app.post('/api/start', (req, res) => {
+// Sunucu başlat (duplicate kontrolü ile) - Moderator+ yetkisi gerekli
+app.post('/api/start', verifyToken, requireRole('admin', 'moderator'), (req, res) => {
   // Önce sunucu durumunu kontrol et
   exec('pm2 jlist', (error, stdout) => {
     if (error) {
@@ -193,8 +253,8 @@ app.post('/api/start', (req, res) => {
   });
 });
 
-// Sunucu durdur
-app.post('/api/stop', (req, res) => {
+// Sunucu durdur - Admin yetkisi gerekli
+app.post('/api/stop', verifyToken, requireRole('admin'), (req, res) => {
   exec('pm2 stop minecraft', (error, stdout, stderr) => {
     if (error) {
       return res.status(500).json({ success: false, error: error.message });
@@ -203,8 +263,8 @@ app.post('/api/stop', (req, res) => {
   });
 });
 
-// Sunucu restart (lock temizleme ile)
-app.post('/api/restart', (req, res) => {
+// Sunucu restart (lock temizleme ile) - Moderator+ yetkisi gerekli
+app.post('/api/restart', verifyToken, requireRole('admin', 'moderator'), (req, res) => {
   // Önce durdur, lock temizle, sonra başlat
   exec('pm2 stop minecraft', (err1) => {
     // Lock dosyalarını temizle
@@ -273,8 +333,8 @@ app.get('/api/info', (req, res) => {
   }
 });
 
-// Konsol komutu gönder (RCON)
-app.post('/api/command', async (req, res) => {
+// Konsol komutu gönder (RCON) - Moderator+ yetkisi gerekli
+app.post('/api/command', verifyToken, requireRole('admin', 'moderator'), async (req, res) => {
   const { command } = req.body;
   
   if (!command) {

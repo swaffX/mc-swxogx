@@ -7,9 +7,118 @@ let serverData = { running: false, uptime: 0, memory: 0, cpu: 0, restarts: 0 };
 let serverInfo = { motd: '-', port: '25565', difficulty: '-', gamemode: '-', maxPlayers: 20 };
 let playersData = { online: 0, max: 20 };
 let statsChart = null;
+let authToken = null;
+let userRole = 'user';
+
+// Auth Check
+function checkAuth() {
+    authToken = localStorage.getItem('authToken');
+    userRole = localStorage.getItem('userRole') || 'user';
+    const userName = localStorage.getItem('userName');
+    
+    if (!authToken) {
+        window.location.href = '/login.html';
+        return false;
+    }
+    
+    // Kullanıcı bilgisini göster
+    updateUserInfo(userName, userRole);
+    return true;
+}
+
+// Update User Info
+function updateUserInfo(name, role) {
+    const roleColors = {
+        admin: '#ef4444',
+        moderator: '#f59e0b',
+        user: '#10b981'
+    };
+    
+    const roleNames = {
+        admin: 'Admin',
+        moderator: 'Moderatör',
+        user: 'Kullanıcı'
+    };
+    
+    // Header'a kullanıcı bilgisi ekle
+    const headerContent = document.querySelector('.header-content');
+    const userInfo = document.createElement('div');
+    userInfo.className = 'user-info';
+    userInfo.innerHTML = `
+        <div class="user-badge" style="background: ${roleColors[role]}20; color: ${roleColors[role]}; padding: 8px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+            <span>👤 ${name}</span>
+            <span style="opacity: 0.7;">•</span>
+            <span>${roleNames[role]}</span>
+        </div>
+        ${role === 'admin' ? '<a href="/admin.html" class="btn-icon" title="Admin Panel" style="margin-left: 12px;">👑</a>' : ''}
+        <button class="btn-icon" onclick="logout()" title="Çıkış Yap" style="margin-left: 12px;">🚪</button>
+    `;
+    headerContent.appendChild(userInfo);
+    
+    // Yetki kontrolü - butonları gizle/göster
+    updateUIPermissions(role);
+}
+
+// Update UI based on permissions
+function updateUIPermissions(role) {
+    const btnStop = document.getElementById('btnStop');
+    const btnStart = document.getElementById('btnStart');
+    const btnRestart = document.getElementById('btnRestart');
+    
+    if (role === 'user') {
+        // Normal kullanıcılar sadece izleyebilir
+        btnStop.style.display = 'none';
+        btnStart.style.display = 'none';
+        btnRestart.style.display = 'none';
+        document.getElementById('consoleInput').disabled = true;
+        document.querySelector('.btn-send').disabled = true;
+    } else if (role === 'moderator') {
+        // Moderatörler stop hariç her şeyi yapabilir
+        btnStop.style.display = 'none';
+    }
+}
+
+// Logout
+function logout() {
+    if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userRole');
+        window.location.href = '/login.html';
+    }
+}
+
+// Fetch with Auth
+async function fetchWithAuth(url, options = {}) {
+    if (!authToken) {
+        window.location.href = '/login.html';
+        return;
+    }
+    
+    options.headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${authToken}`
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (response.status === 401) {
+        showToast('Oturum süreniz doldu. Lütfen tekrar giriş yapın.', 'error');
+        setTimeout(() => {
+            localStorage.removeItem('authToken');
+            window.location.href = '/login.html';
+        }, 2000);
+        throw new Error('Unauthorized');
+    }
+    
+    return response;
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    if (!checkAuth()) return;
+    
     renderStatsGrid();
     renderControlCard();
     renderInfoCard();
@@ -214,11 +323,15 @@ async function startServer() {
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div>';
     try {
-        const res = await fetch(`${API_URL}/api/start`, { method: 'POST' });
+        const res = await fetchWithAuth(`${API_URL}/api/start`, { method: 'POST' });
         const data = await res.json();
         showToast(data.message || 'Sunucu başlatılıyor...', 'success');
         setTimeout(fetchStatus, 2000);
-    } catch (e) { showToast('Hata: ' + e.message, 'error'); }
+    } catch (e) { 
+        if (e.message !== 'Unauthorized') {
+            showToast('Hata: ' + e.message, 'error'); 
+        }
+    }
     finally { btn.disabled = false; btn.innerHTML = '<span>▶️ Başlat</span>'; }
 }
 
@@ -228,11 +341,15 @@ async function stopServer() {
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div>';
     try {
-        const res = await fetch(`${API_URL}/api/stop`, { method: 'POST' });
+        const res = await fetchWithAuth(`${API_URL}/api/stop`, { method: 'POST' });
         const data = await res.json();
         showToast(data.message || 'Sunucu durduruluyor...', 'warning');
         setTimeout(fetchStatus, 2000);
-    } catch (e) { showToast('Hata: ' + e.message, 'error'); }
+    } catch (e) { 
+        if (e.message !== 'Unauthorized') {
+            showToast('Hata: ' + e.message, 'error'); 
+        }
+    }
     finally { btn.disabled = false; btn.innerHTML = '<span>⏹️ Durdur</span>'; }
 }
 
@@ -242,11 +359,15 @@ async function restartServer() {
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div>';
     try {
-        const res = await fetch(`${API_URL}/api/restart`, { method: 'POST' });
+        const res = await fetchWithAuth(`${API_URL}/api/restart`, { method: 'POST' });
         const data = await res.json();
         showToast(data.message || 'Sunucu yeniden başlatılıyor...', 'warning');
         setTimeout(fetchStatus, 3000);
-    } catch (e) { showToast('Hata: ' + e.message, 'error'); }
+    } catch (e) { 
+        if (e.message !== 'Unauthorized') {
+            showToast('Hata: ' + e.message, 'error'); 
+        }
+    }
     finally { btn.disabled = false; btn.innerHTML = '<span>🔄 Restart</span>'; }
 }
 
@@ -322,7 +443,7 @@ async function sendCommand() {
     input.value = '';
     
     try {
-        const res = await fetch(`${API_URL}/api/command`, {
+        const res = await fetchWithAuth(`${API_URL}/api/command`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ command })
@@ -335,7 +456,9 @@ async function sendCommand() {
             output.innerHTML += `<div class="console-line error">${data.error}</div>`;
         }
     } catch (e) {
-        output.innerHTML += `<div class="console-line error">Hata: ${e.message}</div>`;
+        if (e.message !== 'Unauthorized') {
+            output.innerHTML += `<div class="console-line error">Hata: ${e.message}</div>`;
+        }
     }
     
     output.scrollTop = output.scrollHeight;

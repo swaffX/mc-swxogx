@@ -50,6 +50,11 @@ Thumbs.db
 *.key
 *.pem
 github-actions-key*
+firebase-service-account.json
+swxogx-minecraft-firebase-adminsdk-*.json
+
+# User Data
+data/user-roles.json
 
 # Temp
 *.tmp
