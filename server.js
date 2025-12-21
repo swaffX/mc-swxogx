@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const net = require('net');
-const { verifyToken, requireRole, setUserRole, getUserRole } = require('./middleware/auth');
+const { verifyToken, requireRole, setUserRole, getUserRole } = require('./public/middleware/auth');
 
 // RCON Client
 class RconClient {
