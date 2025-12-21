@@ -183,3 +183,12 @@ function showToast(message, type = 'info') {
 console.log('🔄 Loading Firebase...');
 showLoading();
 initFirebase();
+
+// Google Sign-In butonuna event listener ekle
+document.addEventListener('DOMContentLoaded', () => {
+    const signInBtn = document.getElementById('googleSignInBtn');
+    if (signInBtn) {
+        signInBtn.addEventListener('click', signInWithGoogle);
+        console.log('✅ Sign-in button listener attached');
+    }
+});
