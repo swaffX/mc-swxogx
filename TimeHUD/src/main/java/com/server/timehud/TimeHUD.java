@@ -12,24 +12,19 @@ import org.bukkit.scoreboard.*;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 
 public class TimeHUD extends JavaPlugin implements Listener {
     
     private HashMap<UUID, Boolean> hudEnabled = new HashMap<>();
+    private static final Set<String> DEVELOPERS = new HashSet<>(Arrays.asList("swxff", "ouz"));
     
     @Override
     public void onEnable() {
         getLogger().info("TimeHUD plugin enabled!");
-        
-        // Register events
         getServer().getPluginManager().registerEvents(this, this);
-        
-        // Register command
         getCommand("timehud").setExecutor(new TimeHUDCommand(this));
         
-        // Start HUD update task (runs every second)
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -54,14 +49,17 @@ public class TimeHUD extends JavaPlugin implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         String playerName = player.getName();
+        boolean isDev = DEVELOPERS.contains(playerName.toLowerCase());
         
-        // Custom join message in chat
         event.setJoinMessage(null);
         Bukkit.broadcastMessage("");
-        Bukkit.broadcastMessage(ChatColor.GOLD + "  ★ " + ChatColor.GREEN + playerName + ChatColor.GRAY + " sunucuya katıldı!");
+        if (isDev) {
+            Bukkit.broadcastMessage(ChatColor.GOLD + "  ⚡ " + ChatColor.RED + "Geliştirici " + ChatColor.AQUA + playerName + ChatColor.GRAY + " sunucuya katıldı!");
+        } else {
+            Bukkit.broadcastMessage(ChatColor.GOLD + "  ★ " + ChatColor.GREEN + playerName + ChatColor.GRAY + " sunucuya katıldı!");
+        }
         Bukkit.broadcastMessage("");
         
-        // Welcome title animation
         new BukkitRunnable() {
             int tick = 0;
             @Override
@@ -73,11 +71,7 @@ public class TimeHUD extends JavaPlugin implements Listener {
                         10, 40, 10
                     );
                 } else if (tick == 3) {
-                    player.sendTitle(
-                        "",
-                        ChatColor.GRAY + "İyi oyunlar!",
-                        0, 30, 20
-                    );
+                    player.sendTitle("", ChatColor.GRAY + "İyi oyunlar!", 0, 30, 20);
                 } else if (tick >= 5) {
                     cancel();
                 }
@@ -85,7 +79,6 @@ public class TimeHUD extends JavaPlugin implements Listener {
             }
         }.runTaskTimer(this, 0L, 20L);
         
-        // Welcome action bar
         new BukkitRunnable() {
             int count = 0;
             @Override
@@ -107,9 +100,7 @@ public class TimeHUD extends JavaPlugin implements Listener {
     
     public void setHUDEnabled(Player player, boolean enabled) {
         hudEnabled.put(player.getUniqueId(), enabled);
-        if (!enabled) {
-            removeHUD(player);
-        }
+        if (!enabled) removeHUD(player);
     }
     
     private void updateHUD(Player player) {
@@ -122,15 +113,13 @@ public class TimeHUD extends JavaPlugin implements Listener {
             ChatColor.GOLD + "" + ChatColor.BOLD + "⚡ SWXOQX ⚡"
         );
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setRenderType(RenderType.INTEGER);
+        objective.numberFormat(io.papermc.paper.scoreboard.numbers.NumberFormat.blank());
         
-        // Get world time
         long worldTime = player.getWorld().getTime();
         int hours = (int) ((worldTime / 1000 + 6) % 24);
         int minutes = (int) ((worldTime % 1000) * 60 / 1000);
         String timeString = String.format("%02d:%02d", hours, minutes);
         
-        // Calculate time until next period
         String nextPeriod;
         int minutesUntilNext;
         
@@ -156,7 +145,6 @@ public class TimeHUD extends JavaPlugin implements Listener {
         int nextMins = minutesUntilNext % 60;
         String countdown = String.format("%dsa %ddk", nextHours, nextMins);
         
-        // Get period with icon
         String period;
         if (hours >= 6 && hours < 12) {
             period = ChatColor.YELLOW + "☀ Sabah";
@@ -168,38 +156,26 @@ public class TimeHUD extends JavaPlugin implements Listener {
             period = ChatColor.DARK_PURPLE + "☾ Gece";
         }
         
-        // Online players
         int onlinePlayers = Bukkit.getOnlinePlayers().size();
         int maxPlayers = Bukkit.getMaxPlayers();
         
-        // Build scoreboard without numbers on right side
-        int score = 15;
+        String playerName = player.getName();
+        boolean isDev = DEVELOPERS.contains(playerName.toLowerCase());
+        String roleLabel = isDev ? ChatColor.RED + "Geliştirici" : ChatColor.WHITE + "Oyuncu";
+        String nameColor = isDev ? ChatColor.AQUA.toString() : ChatColor.GREEN.toString();
         
-        // Top border
-        setScore(objective, ChatColor.DARK_GRAY + "▬▬▬▬▬▬▬▬▬▬▬▬▬▬", score--);
+        int score = 12;
         
-        // Player name
+        setScore(objective, ChatColor.DARK_GRAY + "▬▬▬▬▬▬▬▬▬▬▬▬▬", score--);
         setScore(objective, " ", score--);
-        setScore(objective, ChatColor.WHITE + "Oyuncu: " + ChatColor.GREEN + player.getName(), score--);
-        
-        // Spacer
+        setScore(objective, roleLabel + ": " + nameColor + playerName, score--);
         setScore(objective, "  ", score--);
-        
-        // Time
         setScore(objective, ChatColor.WHITE + "Saat: " + ChatColor.AQUA + timeString, score--);
         setScore(objective, ChatColor.WHITE + "Dönem: " + period, score--);
-        
-        // Countdown
         setScore(objective, "   ", score--);
         setScore(objective, ChatColor.GRAY + "▸ " + nextPeriod + ": " + ChatColor.YELLOW + countdown, score--);
-        
-        // Spacer
         setScore(objective, "    ", score--);
-        
-        // Online players
         setScore(objective, ChatColor.WHITE + "Oyuncular: " + ChatColor.GREEN + onlinePlayers + ChatColor.GRAY + "/" + maxPlayers, score--);
-        
-        // Bottom border
         setScore(objective, "     ", score--);
         setScore(objective, ChatColor.DARK_GRAY + "▬▬▬▬▬▬▬▬▬▬▬▬▬▬", score--);
         
@@ -207,8 +183,7 @@ public class TimeHUD extends JavaPlugin implements Listener {
     }
     
     private void setScore(Objective objective, String text, int score) {
-        Score s = objective.getScore(text);
-        s.setScore(score);
+        objective.getScore(text).setScore(score);
     }
     
     private void removeHUD(Player player) {
