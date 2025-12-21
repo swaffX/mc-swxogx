@@ -81,6 +81,10 @@ function loadPage(page) {
             title: 'Performance',
             content: getPerformanceContent
         },
+        roles: {
+            title: 'Role Manager',
+            content: getRolesContent
+        },
         settings: {
             title: 'Settings',
             content: getSettingsContent
@@ -98,6 +102,7 @@ function loadPage(page) {
         if (page === 'players') initPlayers();
         if (page === 'console') initConsole();
         if (page === 'performance') initPerformance();
+        if (page === 'roles') initRoles();
         if (page === 'settings') initSettings();
     }
 }
@@ -107,7 +112,7 @@ function getDashboardContent() {
     return `
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon blue">🎮</div>
+                <div class="stat-icon purple">🎮</div>
                 <div class="stat-info">
                     <div class="stat-label">Server Status</div>
                     <div class="stat-value" id="dashStatus">Checking...</div>
@@ -117,7 +122,7 @@ function getDashboardContent() {
                 <div class="stat-icon green">👥</div>
                 <div class="stat-info">
                     <div class="stat-label">Online Players</div>
-                    <div class="stat-value" id="dashPlayers">0</div>
+                    <div class="stat-value" id="dashPlayers">0/20</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -128,7 +133,7 @@ function getDashboardContent() {
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon purple">💾</div>
+                <div class="stat-icon blue">💾</div>
                 <div class="stat-info">
                     <div class="stat-label">Memory</div>
                     <div class="stat-value" id="dashMemory">--</div>
@@ -136,10 +141,55 @@ function getDashboardContent() {
             </div>
         </div>
         
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">🎮</span>
+                    <h2 class="card-title">Server Control</h2>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+                    <button class="btn btn-success" onclick="serverAction('start')">
+                        <span>▶️</span> Start
+                    </button>
+                    <button class="btn btn-danger" onclick="serverAction('stop')">
+                        <span>⏹️</span> Stop
+                    </button>
+                    <button class="btn btn-warning" onclick="serverAction('restart')">
+                        <span>🔄</span> Restart
+                    </button>
+                </div>
+                <div id="serverControlInfo" style="font-size: 13px; color: var(--text-secondary);">
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                        <span>⏱️ Uptime:</span>
+                        <span id="serverUptime">--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                        <span>💻 CPU:</span>
+                        <span id="serverCPU">--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                        <span>🔢 Version:</span>
+                        <span>Paper 1.21.4</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">👥</span>
+                    <h2 class="card-title">Online Players</h2>
+                    <span class="nav-badge" id="dashPlayerCount" style="margin-left: auto;">0</span>
+                </div>
+                <div id="dashPlayersList" style="max-height: 200px; overflow-y: auto;">
+                    <p style="color: var(--text-secondary); text-align: center; padding: 20px;">No players online</p>
+                </div>
+            </div>
+        </div>
+        
         <div class="card">
             <div class="card-header">
                 <span class="card-icon">📊</span>
-                <h2 class="card-title">Quick Overview</h2>
+                <h2 class="card-title">System Information</h2>
             </div>
             <div id="dashboardOverview">Loading...</div>
         </div>
@@ -240,6 +290,30 @@ function getSettingsContent() {
     `;
 }
 
+// Roles Content
+function getRolesContent() {
+    return `
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon">👑</span>
+                <h2 class="card-title">Role Management</h2>
+                <button class="btn btn-primary" onclick="createNewRole()" style="margin-left: auto;">
+                    <span>➕</span> Create Role
+                </button>
+            </div>
+            <div id="rolesList">Loading roles...</div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon">👥</span>
+                <h2 class="card-title">Player Roles</h2>
+            </div>
+            <div id="playerRolesList">Loading players...</div>
+        </div>
+    `;
+}
+
 // Initialize Dashboard
 function initDashboard() {
     fetchServerStatus();
@@ -275,6 +349,167 @@ function initPerformance() {
 // Initialize Settings
 function initSettings() {
     // Settings initialization
+}
+
+// Initialize Roles
+function initRoles() {
+    loadRoles();
+    loadPlayerRoles();
+}
+
+// Role Management System
+const defaultRoles = {
+    admin: {
+        name: 'Admin',
+        color: '#ef4444',
+        permissions: ['*']
+    },
+    moderator: {
+        name: 'Moderator',
+        color: '#f59e0b',
+        permissions: ['kick', 'mute', 'warn', 'teleport']
+    },
+    vip: {
+        name: 'VIP',
+        color: '#8b5cf6',
+        permissions: ['fly', 'kit.vip', 'home.3']
+    },
+    player: {
+        name: 'Player',
+        color: '#10b981',
+        permissions: ['chat', 'build', 'break']
+    }
+};
+
+async function loadRoles() {
+    const rolesDiv = document.getElementById('rolesList');
+    if (!rolesDiv) return;
+    
+    const roles = JSON.parse(localStorage.getItem('serverRoles') || JSON.stringify(defaultRoles));
+    
+    rolesDiv.innerHTML = Object.entries(roles).map(([id, role]) => `
+        <div class="role-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 8px; background: ${role.color}; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    👑
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 16px;">${role.name}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">${role.permissions.length} permissions</div>
+                </div>
+                <button class="btn btn-primary" onclick="editRole('${id}')" style="padding: 8px 16px; font-size: 13px;">
+                    ✏️ Edit
+                </button>
+                ${id !== 'admin' && id !== 'player' ? `
+                <button class="btn btn-danger" onclick="deleteRole('${id}')" style="padding: 8px 16px; font-size: 13px;">
+                    🗑️
+                </button>
+                ` : ''}
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                ${role.permissions.slice(0, 10).map(perm => `
+                    <span style="background: rgba(139, 92, 246, 0.2); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #c4b5fd;">
+                        ${perm}
+                    </span>
+                `).join('')}
+                ${role.permissions.length > 10 ? `<span style="color: var(--text-secondary); font-size: 11px;">+${role.permissions.length - 10} more</span>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+async function loadPlayerRoles() {
+    const listDiv = document.getElementById('playerRolesList');
+    if (!listDiv) return;
+    
+    try {
+        const res = await fetch('/api/players', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.players && data.players.length > 0) {
+            listDiv.innerHTML = data.players.map(playerName => {
+                const playerRole = localStorage.getItem(`player_role_${playerName}`) || 'player';
+                const roles = JSON.parse(localStorage.getItem('serverRoles') || JSON.stringify(defaultRoles));
+                const role = roles[playerRole] || roles.player;
+                
+                return `
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;">
+                        <img src="https://mc-heads.net/avatar/${playerName}/40" 
+                             style="width: 40px; height: 40px; border-radius: 8px; image-rendering: pixelated;"
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect fill=%22%23374151%22 width=%2240%22 height=%2240%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2220%22>?</text></svg>'">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600;">${playerName}</div>
+                            <div style="font-size: 12px; color: ${role.color};">${role.name}</div>
+                        </div>
+                        <select onchange="changePlayerRole('${playerName}', this.value)" 
+                                style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: white; font-size: 13px;">
+                            ${Object.entries(roles).map(([id, r]) => `
+                                <option value="${id}" ${playerRole === id ? 'selected' : ''}>${r.name}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            listDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No players online</p>';
+        }
+    } catch (error) {
+        listDiv.innerHTML = '<p style="color: var(--danger);">Failed to load players</p>';
+    }
+}
+
+function createNewRole() {
+    const roleName = prompt('Enter role name:');
+    if (!roleName) return;
+    
+    const roleId = roleName.toLowerCase().replace(/\s+/g, '_');
+    const roles = JSON.parse(localStorage.getItem('serverRoles') || JSON.stringify(defaultRoles));
+    
+    if (roles[roleId]) {
+        showToast('Role already exists!', 'error');
+        return;
+    }
+    
+    roles[roleId] = {
+        name: roleName,
+        color: '#' + Math.floor(Math.random()*16777215).toString(16),
+        permissions: []
+    };
+    
+    localStorage.setItem('serverRoles', JSON.stringify(roles));
+    loadRoles();
+    showToast(`Role "${roleName}" created!`, 'success');
+}
+
+function editRole(roleId) {
+    const roles = JSON.parse(localStorage.getItem('serverRoles') || JSON.stringify(defaultRoles));
+    const role = roles[roleId];
+    
+    const perms = prompt(`Edit permissions for ${role.name} (comma separated):`, role.permissions.join(', '));
+    if (perms === null) return;
+    
+    role.permissions = perms.split(',').map(p => p.trim()).filter(p => p);
+    localStorage.setItem('serverRoles', JSON.stringify(roles));
+    loadRoles();
+    showToast(`Role "${role.name}" updated!`, 'success');
+}
+
+function deleteRole(roleId) {
+    if (!confirm('Are you sure you want to delete this role?')) return;
+    
+    const roles = JSON.parse(localStorage.getItem('serverRoles') || JSON.stringify(defaultRoles));
+    delete roles[roleId];
+    localStorage.setItem('serverRoles', JSON.stringify(roles));
+    loadRoles();
+    showToast('Role deleted!', 'success');
+}
+
+function changePlayerRole(playerName, newRole) {
+    localStorage.setItem(`player_role_${playerName}`, newRole);
+    showToast(`${playerName}'s role changed!`, 'success');
+    loadPlayerRoles();
 }
 
 // API Calls
@@ -344,7 +579,10 @@ async function fetchPlayers() {
         if (listDiv) {
             if (data.players && data.players.length > 0) {
                 listDiv.innerHTML = data.players.map(p => `
-                    <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px;">
+                        <img src="https://mc-heads.net/avatar/${p}/40" 
+                             style="width: 40px; height: 40px; border-radius: 8px; image-rendering: pixelated;"
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect fill=%22%23374151%22 width=%2240%22 height=%2240%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2220%22>?</text></svg>'">
                         <strong>👤 ${p}</strong>
                     </div>
                 `).join('');
@@ -363,22 +601,59 @@ async function fetchPlayers() {
     }
 }
 
+async function updateDashboardPlayers() {
+    try {
+        const res = await fetch('/api/players', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        const listDiv = document.getElementById('dashPlayersList');
+        if (listDiv) {
+            if (data.players && data.players.length > 0) {
+                listDiv.innerHTML = data.players.map(p => `
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 6px;">
+                        <img src="https://mc-heads.net/avatar/${p}/32" 
+                             style="width: 32px; height: 32px; border-radius: 6px; image-rendering: pixelated;"
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22><rect fill=%22%23374151%22 width=%2232%22 height=%2232%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2216%22>?</text></svg>'">
+                        <span style="font-weight: 500; font-size: 14px;">${p}</span>
+                        <span style="margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+                    </div>
+                `).join('');
+            } else {
+                listDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No players online</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Dashboard players fetch error:', error);
+    }
+}
+
 function updateServerStatus(data) {
     const statusEl = document.getElementById('serverStatus');
     const dashStatus = document.getElementById('dashStatus');
     const dashPlayers = document.getElementById('dashPlayers');
     const dashTPS = document.getElementById('dashTPS');
     const dashMemory = document.getElementById('dashMemory');
+    const dashPlayerCount = document.getElementById('dashPlayerCount');
+    const serverUptime = document.getElementById('serverUptime');
+    const serverCPU = document.getElementById('serverCPU');
     
     if (statusEl) {
         statusEl.className = 'server-status ' + (data.online ? 'online' : 'offline');
         statusEl.querySelector('span').textContent = data.online ? 'Online' : 'Offline';
     }
     
-    if (dashStatus) dashStatus.textContent = data.online ? 'Online' : 'Offline';
-    if (dashPlayers) dashPlayers.textContent = data.players || 0;
+    if (dashStatus) dashStatus.textContent = data.online ? '✅ Online' : '❌ Offline';
+    if (dashPlayers) dashPlayers.textContent = `${data.players || 0}/20`;
     if (dashTPS) dashTPS.textContent = data.tps || '--';
     if (dashMemory) dashMemory.textContent = data.memory || '--';
+    if (dashPlayerCount) dashPlayerCount.textContent = data.players || 0;
+    if (serverUptime) serverUptime.textContent = data.uptime || '--';
+    if (serverCPU) serverCPU.textContent = data.cpu || '--';
+    
+    // Update dashboard players list
+    updateDashboardPlayers();
 }
 
 async function serverAction(action) {
