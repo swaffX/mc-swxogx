@@ -17,7 +17,7 @@ function checkAuth() {
     const userName = localStorage.getItem('userName');
     
     if (!authToken) {
-        window.location.href = '/login.html';
+        window.location.href = '/checking.html';
         return false;
     }
     
@@ -50,8 +50,8 @@ function updateUserInfo(name, role) {
             <span style="opacity: 0.7;">•</span>
             <span>${roleNames[role]}</span>
         </div>
-        ${role === 'admin' ? '<a href="/admin.html" class="btn-icon" title="Admin Panel" style="margin-left: 12px;">👑</a>' : ''}
-        <button class="btn-icon" onclick="logout()" title="Çıkış Yap" style="margin-left: 12px;">🚪</button>
+        ${role === 'admin' ? '<a href="/admin.html" class="btn-icon" title="Admin Panel" style="margin-left: 12px; padding: 8px 16px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; color: #ef4444; text-decoration: none; font-size: 14px; font-weight: 600;">👑 Admin</a>' : ''}
+        <button onclick="logout()" style="margin-left: 12px; padding: 8px 16px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; color: #ef4444; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'">Çıkış Yap</button>
     `;
     headerContent.appendChild(userInfo);
     
@@ -64,14 +64,22 @@ function updateUIPermissions(role) {
     const btnStop = document.getElementById('btnStop');
     const btnStart = document.getElementById('btnStart');
     const btnRestart = document.getElementById('btnRestart');
+    const consoleInput = document.getElementById('consoleInput');
+    const btnSend = document.querySelector('.btn-send');
+    
+    // Butonlar henüz render edilmemişse çık
+    if (!btnStop || !btnStart || !btnRestart) {
+        console.warn('⚠️ Control buttons not found yet, will update after render');
+        return;
+    }
     
     if (role === 'user') {
         // Normal kullanıcılar sadece izleyebilir
         btnStop.style.display = 'none';
         btnStart.style.display = 'none';
         btnRestart.style.display = 'none';
-        document.getElementById('consoleInput').disabled = true;
-        document.querySelector('.btn-send').disabled = true;
+        if (consoleInput) consoleInput.disabled = true;
+        if (btnSend) btnSend.disabled = true;
     } else if (role === 'moderator') {
         // Moderatörler stop hariç her şeyi yapabilir
         btnStop.style.display = 'none';

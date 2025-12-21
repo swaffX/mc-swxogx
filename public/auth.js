@@ -52,7 +52,7 @@ async function initFirebase() {
                     
                     showToast('Welcome, ' + user.displayName + '!', 'success');
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = '/checking.html';
                     }, 1000);
                 } else {
                     // Yetkisiz kullanıcı, çıkış yap ve hata göster

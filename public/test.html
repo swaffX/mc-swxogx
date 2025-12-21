@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - File Loading</title>
+</head>
+<body>
+    <h1>File Loading Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const files = [
+            '/login.html',
+            '/login.css',
+            '/auth.js',
+            '/app.js',
+            '/styles.css',
+            '/index.html'
+        ];
+        
+        const results = document.getElementById('results');
+        
+        files.forEach(async (file) => {
+            try {
+                const response = await fetch(file);
+                const status = response.status;
+                const statusText = response.statusText;
+                
+                const div = document.createElement('div');
+                div.style.padding = '10px';
+                div.style.margin = '5px';
+                div.style.border = '1px solid #ccc';
+                div.style.backgroundColor = status === 200 ? '#d4edda' : '#f8d7da';
+                div.innerHTML = `
+                    <strong>${file}</strong><br>
+                    Status: ${status} ${statusText}
+                `;
+                results.appendChild(div);
+            } catch (error) {
+                const div = document.createElement('div');
+                div.style.padding = '10px';
+                div.style.margin = '5px';
+                div.style.border = '1px solid #ccc';
+                div.style.backgroundColor = '#f8d7da';
+                div.innerHTML = `
+                    <strong>${file}</strong><br>
+                    Error: ${error.message}
+                `;
+                results.appendChild(div);
+            }
+        });
+    </script>
+</body>
+</html>
