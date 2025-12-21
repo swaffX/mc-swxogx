@@ -280,10 +280,24 @@ function initSettings() {
 // API Calls
 async function fetchServerStatus() {
     try {
-        const res = await fetch('/api/status', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
+        const [statusRes, tpsRes, playersRes] = await Promise.all([
+            fetch('/api/status', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('/api/tps', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('/api/players', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        
+        const statusData = await statusRes.json();
+        const tpsData = await tpsRes.json();
+        const playersData = await playersRes.json();
+        
+        // Combine data
+        const data = {
+            online: statusData.running || false,
+            players: playersData.online || 0,
+            tps: tpsData.tps1m ? tpsData.tps1m.toFixed(1) : '--',
+            memory: statusData.memory ? `${(statusData.memory / 1024 / 1024).toFixed(0)} MB` : '--',
+            cpu: statusData.cpu ? `${statusData.cpu}%` : '--'
+        };
         
         updateServerStatus(data);
     } catch (error) {
@@ -331,7 +345,7 @@ async function fetchPlayers() {
             if (data.players && data.players.length > 0) {
                 listDiv.innerHTML = data.players.map(p => `
                     <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px;">
-                        <strong>${p.name}</strong>
+                        <strong>👤 ${p}</strong>
                     </div>
                 `).join('');
             } else {
@@ -342,7 +356,7 @@ async function fetchPlayers() {
         // Update badge
         const badge = document.getElementById('playerBadge');
         if (badge) {
-            badge.textContent = data.count || 0;
+            badge.textContent = data.online || 0;
         }
     } catch (error) {
         console.error('Players fetch error:', error);

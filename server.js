@@ -375,6 +375,101 @@ app.get('/api/tps', async (req, res) => {
   }
 });
 
+// System info endpoint for dashboard
+app.get('/api/system-info', verifyToken, async (req, res) => {
+  try {
+    const cpus = os.cpus();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    
+    // Get server uptime
+    let serverUptime = 'N/A';
+    exec('pm2 jlist', (error, stdout) => {
+      if (!error) {
+        try {
+          const processes = JSON.parse(stdout);
+          const minecraft = processes.find(p => p.name === 'minecraft');
+          if (minecraft && minecraft.pm2_env.status === 'online') {
+            const uptimeMs = Date.now() - minecraft.pm2_env.pm_uptime;
+            const hours = Math.floor(uptimeMs / 3600000);
+            const minutes = Math.floor((uptimeMs % 3600000) / 60000);
+            serverUptime = `${hours}h ${minutes}m`;
+          }
+        } catch (e) {}
+      }
+    });
+    
+    res.json({
+      cpu: `${cpus.length} cores @ ${cpus[0].speed} MHz`,
+      memory: `${(usedMem / 1024 / 1024 / 1024).toFixed(2)} GB / ${(totalMem / 1024 / 1024 / 1024).toFixed(2)} GB`,
+      uptime: serverUptime,
+      platform: `${os.type()} ${os.release()}`,
+      hostname: os.hostname()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Server control endpoints for dashboard
+app.post('/api/server/start', verifyToken, requireRole('admin', 'moderator'), (req, res) => {
+  exec('pm2 jlist', (error, stdout) => {
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+    
+    try {
+      const processes = JSON.parse(stdout);
+      const minecraft = processes.find(p => p.name === 'minecraft');
+      
+      if (minecraft && minecraft.pm2_env.status === 'online') {
+        return res.json({ success: false, message: 'Server is already running!' });
+      }
+      
+      exec('pm2 start minecraft', (err) => {
+        if (err) {
+          return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: 'Server is starting...' });
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, message: 'Parse error' });
+    }
+  });
+});
+
+app.post('/api/server/stop', verifyToken, requireRole('admin'), (req, res) => {
+  exec('pm2 stop minecraft', (error) => {
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+    res.json({ success: true, message: 'Server stopped successfully' });
+  });
+});
+
+app.post('/api/server/restart', verifyToken, requireRole('admin', 'moderator'), (req, res) => {
+  exec('pm2 stop minecraft', () => {
+    const lockFiles = [
+      '/opt/minecraft/world/session.lock',
+      '/opt/minecraft/world_nether/session.lock',
+      '/opt/minecraft/world_the_end/session.lock'
+    ];
+    lockFiles.forEach(f => {
+      try { fs.unlinkSync(f); } catch(e) {}
+    });
+    
+    setTimeout(() => {
+      exec('pm2 start minecraft', (err) => {
+        if (err) {
+          return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: 'Server is restarting...' });
+      });
+    }, 2000);
+  });
+});
+
 // İstatistik geçmişi (grafik için)
 let statsHistory = [];
 const MAX_HISTORY = 60; // Son 60 veri noktası (5 dakika)
