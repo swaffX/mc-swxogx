@@ -1,7 +1,14 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, SlashCommandBuilder, REST, Routes, PermissionFlagsBits } = require('discord.js');
 const { GameDig } = require('gamedig');
 const fs = require('fs');
+const path = require('path');
 const config = require('./config.json');
+
+// Config dosyasını kaydet
+function saveConfig() {
+    const configPath = path.join(__dirname, 'config.json');
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
 
 // Token environment variable'dan al
 const TOKEN = process.env.DISCORD_TOKEN || '';
@@ -35,6 +42,21 @@ const commands = [
         .addStringOption(option =>
             option.setName('mesaj')
                 .setDescription('Log mesajı')
+                .setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('kanalayarla')
+        .setDescription('Bot kanal ID\'lerini ayarlar')
+        .addStringOption(option =>
+            option.setName('tip')
+                .setDescription('Kanal tipi')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Giriş/Çıkış Log', value: 'log' },
+                    { name: 'Devlog', value: 'devlog' }
+                ))
+        .addChannelOption(option =>
+            option.setName('kanal')
+                .setDescription('Hedef kanal')
                 .setRequired(true)),
     new SlashCommandBuilder()
         .setName('yardim')
@@ -220,9 +242,7 @@ client.on('interactionCreate', async interaction => {
             .setColor(0xFFD700)
             .setTitle('🌐 Sunucu Bilgileri')
             .addFields(
-                { name: '📍 IP Adresi', value: `\`${config.minecraft.host}\``, inline: true },
-                { name: '🔌 Port', value: `\`${config.minecraft.port}\``, inline: true },
-                { name: '📋 Tam Adres', value: `\`${config.minecraft.host}:${config.minecraft.port}\``, inline: false }
+                { name: '📍 Sunucu Adresi', value: '`swxogx.mooo.com`', inline: false }
             )
             .setFooter({ text: 'TLauncher 1.21.10 ile giriş yapabilirsiniz!' });
         
@@ -257,11 +277,46 @@ client.on('interactionCreate', async interaction => {
                 { name: '/oyuncular', value: 'Online oyuncuları listeler', inline: true },
                 { name: '/ip', value: 'Sunucu IP adresini gösterir', inline: true },
                 { name: '/devlog', value: 'Geliştirici logu gönderir', inline: true },
+                { name: '/kanalayarla', value: 'Kanal ID\'lerini ayarlar', inline: true },
                 { name: '/yardim', value: 'Bu mesajı gösterir', inline: true }
             )
             .setFooter({ text: 'SWXOQX Discord Bot' });
         
         await interaction.reply({ embeds: [embed] });
+    }
+    
+    else if (commandName === 'kanalayarla') {
+        // Yetki kontrolü - sadece yöneticiler kullanabilir
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return interaction.reply({ content: '❌ Bu komutu kullanmak için yönetici yetkisine sahip olmalısın!', ephemeral: true });
+        }
+        
+        const tip = interaction.options.getString('tip');
+        const kanal = interaction.options.getChannel('kanal');
+        
+        if (tip === 'log') {
+            config.logChannelId = kanal.id;
+            saveConfig();
+            
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('✅ Giriş/Çıkış Log Kanalı Ayarlandı')
+                .setDescription(`Oyuncu giriş/çıkış logları artık <#${kanal.id}> kanalına gönderilecek.`)
+                .setTimestamp();
+            
+            await interaction.reply({ embeds: [embed] });
+        } else if (tip === 'devlog') {
+            config.devLogChannelId = kanal.id;
+            saveConfig();
+            
+            const embed = new EmbedBuilder()
+                .setColor(0x9B59B6)
+                .setTitle('✅ Devlog Kanalı Ayarlandı')
+                .setDescription(`Geliştirici logları artık <#${kanal.id}> kanalına gönderilecek.`)
+                .setTimestamp();
+            
+            await interaction.reply({ embeds: [embed] });
+        }
     }
 });
 
