@@ -10,7 +10,7 @@ on:
       - 'ecosystem.config.js'
       - 'docs/**'
       - 'data/**'
-      - '*.sh'
+      - 'scripts/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -34,7 +34,7 @@ jobs:
               public/ \
               docs/ \
               data/ \
-              *.sh \
+              scripts/ \
               --exclude='node_modules' \
               --exclude='.git' \
               --exclude='data/*.json' \
@@ -76,7 +76,7 @@ jobs:
             
             # Make scripts executable
             echo "🔧 Setting executable permissions..."
-            chmod +x *.sh 2>/dev/null || true
+            chmod +x scripts/*.sh 2>/dev/null || true
             
             # Create data directory if not exists
             echo "📁 Ensuring data directory..."
