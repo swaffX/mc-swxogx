@@ -65,6 +65,10 @@ async function initFirebase() {
             }
         });
         
+        // Firebase yüklendi, butonu aktif et
+        console.log('✅ Firebase initialized successfully');
+        hideLoading();
+        
     } catch (error) {
         console.error('Firebase initialization error:', error);
         showToast('Firebase could not be loaded. Please refresh the page.', 'error');
@@ -85,6 +89,12 @@ function isAuthorized(uid) {
 
 // Google Sign In
 async function signInWithGoogle() {
+    // Auth henüz yüklenmediyse bekle
+    if (!auth || !googleProvider) {
+        showToast('Please wait, loading...', 'info');
+        return;
+    }
+    
     showLoading();
     hideAccessDenied();
     
@@ -170,5 +180,6 @@ function showToast(message, type = 'info') {
 }
 
 // Initialize
+console.log('🔄 Loading Firebase...');
 showLoading();
 initFirebase();
