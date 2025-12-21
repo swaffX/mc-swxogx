@@ -8,6 +8,7 @@ on:
       - 'public/**'
       - 'package.json'
       - 'docs/**'
+      - 'data/**'
       - 'deploy-roles.sh'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
@@ -24,17 +25,17 @@ jobs:
       - name: 📦 Create deployment archive
         run: |
           echo "📦 Creating deployment archive..."
-          # Create data directory if it doesn't exist
           mkdir -p data
           tar -czf deploy.tar.gz \
+              --exclude='node_modules' \
+              --exclude='.git' \
+              --exclude='data/*.json' \
               server.js \
               package.json \
               public/ \
               docs/ \
-              deploy-roles.sh \
-              --exclude='node_modules' \
-              --exclude='.git' \
-              --exclude='data/*.json'
+              data/ \
+              deploy-roles.sh
           ls -lh deploy.tar.gz
       
       - name: 📤 Upload to VPS
@@ -60,12 +61,12 @@ jobs:
             echo "🚀 Starting deployment..."
             cd /opt/minecraft
             
-            # Extract files
+            # Extract files (overwrites existing)
             echo "📦 Extracting files..."
             tar -xzf /tmp/deploy.tar.gz
             
             # Create data directory if not exists
-            echo "📁 Creating data directory..."
+            echo "📁 Ensuring data directory..."
             mkdir -p data
             
             # Install dependencies
