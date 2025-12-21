@@ -28,20 +28,20 @@ jobs:
           echo "📦 Creating deployment archive..."
           mkdir -p data
           tar -czf deploy.tar.gz \
-              server.js \
-              package.json \
-              ecosystem.config.js \
-              public/ \
-              docs/ \
-              data/ \
-              scripts/ \
               --exclude='node_modules' \
               --exclude='.git' \
               --exclude='data/*.json' \
               --exclude='world*' \
               --exclude='logs' \
               --exclude='plugins' \
-              --exclude='*.jar'
+              --exclude='*.jar' \
+              server.js \
+              package.json \
+              ecosystem.config.js \
+              public/ \
+              docs/ \
+              data/ \
+              scripts/
           ls -lh deploy.tar.gz
       
       - name: 📤 Upload to VPS
