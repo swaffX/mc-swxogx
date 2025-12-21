@@ -67,11 +67,21 @@ const commands = [
 client.once('ready', async () => {
     console.log(`✅ ${client.user.tag} aktif!`);
     
-    // Komutları kaydet
+    // Komutları kaydet - her sunucuya ayrı ayrı (anında güncellenir)
     const rest = new REST({ version: '10' }).setToken(TOKEN);
     try {
-        await rest.put(Routes.applicationCommands(config.clientId), { body: commands });
-        console.log('✅ Slash komutları yüklendi');
+        // Önce global komutları temizle (eski komutlar kaldırılsın)
+        await rest.put(Routes.applicationCommands(config.clientId), { body: [] });
+        
+        // Her sunucuya guild komutları olarak kaydet (anında güncellenir)
+        for (const guild of client.guilds.cache.values()) {
+            await rest.put(
+                Routes.applicationGuildCommands(config.clientId, guild.id),
+                { body: commands }
+            );
+            console.log(`✅ Komutlar ${guild.name} sunucusuna yüklendi`);
+        }
+        console.log('✅ Tüm slash komutları yüklendi');
     } catch (error) {
         console.error('Komut yükleme hatası:', error);
     }

@@ -1,0 +1,67 @@
+name: Backend - Minecraft Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server.properties'
+      - 'bukkit.yml'
+      - 'spigot.yml'
+      - 'TimeHUD/**'
+      - 'plugins/**'
+      - 'ecosystem.config.js'
+  workflow_dispatch:
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+      
+      - name: ☕ Build TimeHUD Plugin
+        run: |
+          echo "🔨 Building TimeHUD plugin..."
+          cd TimeHUD
+          docker run --rm -v $(pwd):/work -w /work maven:3.9-eclipse-temurin-21 mvn clean package -DskipTests -q
+          ls -lh target/TimeHUD-1.0.0.jar
+      
+      - name: 📦 Create backend archive
+        run: |
+          tar -czf backend.tar.gz \
+              server.properties \
+              bukkit.yml \
+              spigot.yml \
+              ecosystem.config.js \
+              TimeHUD/target/TimeHUD-1.0.0.jar
+          ls -lh backend.tar.gz
+      
+      - name: 📤 Upload to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          source: "backend.tar.gz"
+          target: "/tmp"
+          timeout: 120s
+      
+      - name: 🚀 Deploy Backend
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          timeout: 120s
+          script: |
+            cd /opt/minecraft
+            tar -xzf /tmp/backend.tar.gz
+            cp TimeHUD/target/TimeHUD-1.0.0.jar plugins/
+            pm2 restart minecraft
+            pm2 save
+            rm -f /tmp/backend.tar.gz
+            echo "✅ Backend deployed!"
