@@ -51,8 +51,8 @@ anticheat:
     update-radius: 2
     use-permission: false
 chunks:
-  auto-save-interval: default
-  delay-chunk-unloads-by: 10s
+  auto-save-interval: 12000
+  delay-chunk-unloads-by: 5s
   entity-per-chunk-save-limit:
     arrow: -1
     ender_pearl: -1
@@ -62,21 +62,21 @@ chunks:
     snowball: -1
   fixed-chunk-inhabited-time: -1
   flush-regions-on-save: false
-  max-auto-save-chunks-per-tick: 24
-  prevent-moving-into-unloaded-chunks: false
+  max-auto-save-chunks-per-tick: 8
+  prevent-moving-into-unloaded-chunks: true
 collisions:
   allow-player-cramming-damage: false
   allow-vehicle-collisions: true
   fix-climbing-bypassing-cramming-rule: false
-  max-entity-collisions: 8
+  max-entity-collisions: 2
   only-players-collide: false
 command-blocks:
   force-follow-perm-level: true
   permissions-level: 2
 entities:
   armor-stands:
-    do-collision-entity-lookups: true
-    tick: true
+    do-collision-entity-lookups: false
+    tick: false
   behavior:
     allow-spider-world-border-climbing: true
     baby-zombie-movement-modifier: 0.5
@@ -125,7 +125,7 @@ entities:
     zombie-villager-infection-chance: default
     zombies-target-turtle-eggs: true
   markers:
-    tick: true
+    tick: false
   mob-effects:
     immune-to-wither-effect:
       wither: true
@@ -137,9 +137,18 @@ entities:
   spawning:
     all-chunks-are-slime-chunks: false
     alt-item-despawn-rate:
-      enabled: false
+      enabled: true
       items:
         cobblestone: 300
+        netherrack: 300
+        sand: 300
+        gravel: 300
+        dirt: 300
+        grass: 300
+        pumpkin: 300
+        melon: 300
+        kelp: 300
+        bamboo: 300
     count-all-mobs-for-spawning: false
     creative-arrow-despawn-rate: default
     despawn-range-shape: ELLIPSOID
@@ -183,7 +192,7 @@ entities:
     iron-golems-can-spawn-in-air: false
     monster-spawn-max-light-level: default
     non-player-arrow-despawn-rate: default
-    per-player-mob-spawns: true
+    per-player-mob-spawns: false
     scan-for-legacy-ender-dragon: true
     skeleton-horse-thunder-spawn-chance: default
     slime-spawn-height:
@@ -229,7 +238,7 @@ environment:
   disable-explosion-knockback: false
   disable-ice-and-snow: false
   disable-thunder: false
-  fire-tick-delay: 30
+  fire-tick-delay: 60
   frosted-ice:
     delay:
       max: 40
@@ -240,7 +249,7 @@ environment:
   max-block-ticks: 65536
   max-fluid-ticks: 65536
   nether-ceiling-void-damage-height: disabled
-  optimize-explosions: false
+  optimize-explosions: true
   portal-create-radius: 16
   portal-search-radius: 128
   portal-search-vanilla-dimension-scaling: true
@@ -266,8 +275,8 @@ fixes:
   tnt-entity-height-nerf: disabled
 hopper:
   cooldown-when-full: true
-  disable-move-event: false
-  ignore-occluding-blocks: false
+  disable-move-event: true
+  ignore-occluding-blocks: true
 lootables:
   auto-replenish: false
   max-refills: -1
@@ -278,8 +287,8 @@ lootables:
   restrict-player-reloot-time: disabled
   retain-unlooted-shulker-box-loot-table-on-non-player-break: true
 maps:
-  item-frame-cursor-limit: 128
-  item-frame-cursor-update-interval: 10
+  item-frame-cursor-limit: 64
+  item-frame-cursor-update-interval: 20
 max-growth-height:
   bamboo:
     max: 16
@@ -294,7 +303,7 @@ misc:
   disable-sprint-interruption-on-attack: false
   legacy-ender-pearl-behavior: false
   max-leash-distance: default
-  redstone-implementation: VANILLA
+  redstone-implementation: ALTERNATE_CURRENT
   show-sign-click-command-failure-msgs-to-player: false
   update-pathfinding-on-block-update: true
 scoreboards:
@@ -305,15 +314,15 @@ spawn:
 tick-rates:
   behavior:
     villager:
-      validatenearbypoi: -1
-  container-update: 1
-  dry-farmland: 1
-  grass-spread: 1
-  mob-spawner: 1
+      validatenearbypoi: 60
+  container-update: 3
+  dry-farmland: 4
+  grass-spread: 4
+  mob-spawner: 2
   sensor:
     villager:
-      secondarypoisensor: 40
-  wet-farmland: 1
+      secondarypoisensor: 80
+  wet-farmland: 4
 unsupported-settings:
   disable-world-ticking-when-empty: false
   fix-invulnerable-end-crystal-exploit: true

@@ -39,9 +39,9 @@ chunk-loading-advanced:
   player-max-concurrent-chunk-generates: 0
   player-max-concurrent-chunk-loads: 0
 chunk-loading-basic:
-  player-max-chunk-generate-rate: -1.0
-  player-max-chunk-load-rate: 100.0
-  player-max-chunk-send-rate: 75.0
+  player-max-chunk-generate-rate: 5.0
+  player-max-chunk-load-rate: 10.0
+  player-max-chunk-send-rate: 10.0
 chunk-system:
   io-threads: -1
   worker-threads: -1
@@ -86,7 +86,7 @@ misc:
   compression-level: default
   enable-nether: true
   load-permissions-yml-before-plugins: true
-  max-joins-per-tick: 5
+  max-joins-per-tick: 3
   prevent-negative-villager-demand: false
   region-file-cache-size: 256
   send-full-pos-for-item-entities: false

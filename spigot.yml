@@ -52,14 +52,14 @@ world-settings:
     simulation-distance: default
     thunder-chance: 100000
     merge-radius:
-      item: 3.5
-      exp: 4.0
-    mob-spawn-range: 8
-    item-despawn-rate: 6000
-    arrow-despawn-rate: 1200
-    trident-despawn-rate: 1200
+      item: 4.0
+      exp: 6.0
+    mob-spawn-range: 6
+    item-despawn-rate: 3000
+    arrow-despawn-rate: 600
+    trident-despawn-rate: 600
     zombie-aggressive-towards-villager: true
-    nerf-spawner-mobs: false
+    nerf-spawner-mobs: true
     enable-zombie-pigmen-portal-spawns: true
     wither-spawn-sound-radius: 0
     end-portal-sound-radius: 0
@@ -91,10 +91,10 @@ world-settings:
     entity-activation-range:
       animals: 16
       monsters: 24
-      raiders: 48
+      raiders: 32
       misc: 8
-      water: 12
-      villagers: 24
+      water: 8
+      villagers: 16
       flying-monsters: 32
       wake-up-inactive:
         animals-max-per-tick: 4
@@ -115,15 +115,15 @@ world-settings:
       tick-inactive-villagers: true
       ignore-spectators: false
     entity-tracking-range:
-      players: 128
-      animals: 96
-      monsters: 96
-      misc: 96
-      display: 128
-      other: 64
+      players: 64
+      animals: 48
+      monsters: 48
+      misc: 32
+      display: 64
+      other: 32
     ticks-per:
       hopper-transfer: 8
-      hopper-check: 1
+      hopper-check: 8
     hopper-amount: 1
     hopper-can-load-chunks: false
     dragon-death-sound-radius: 0
@@ -158,8 +158,8 @@ world-settings:
       other-multiplier: 0.0
     max-tnt-per-tick: 100
     max-tick-time:
-      tile: 50
-      entity: 50
+      tile: 1000
+      entity: 1000
     verbose: false
 players:
   disable-saving: false
