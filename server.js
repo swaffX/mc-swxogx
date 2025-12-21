@@ -507,6 +507,51 @@ app.post('/api/roles/assign', verifyToken, requireRole('admin', 'moderator'), as
       
       const color = roleColors[roleId] || 'aqua';
       
+      // LuckPerms permissions for each role
+      const rolePermissions = {
+        admin: [
+          'luckperms.user.permission.set',
+          'minecraft.command.gamemode',
+          'minecraft.command.give',
+          'minecraft.command.tp',
+          'minecraft.command.kick',
+          'minecraft.command.ban',
+          'essentials.fly',
+          'essentials.god',
+          'essentials.heal',
+          'essentials.feed'
+        ],
+        moderator: [
+          'minecraft.command.kick',
+          'minecraft.command.tp',
+          'essentials.fly',
+          'essentials.heal'
+        ],
+        vip: [
+          'essentials.fly',
+          'essentials.heal',
+          'essentials.feed',
+          'essentials.home.3'
+        ],
+        player: [
+          'minecraft.command.help',
+          'essentials.home.1'
+        ]
+      };
+      
+      const permissions = rolePermissions[roleId] || rolePermissions.player;
+      
+      // Clear old permissions (remove from all groups)
+      await rcon.send(`lp user ${playerName} clear`).catch(() => {});
+      
+      // Add new permissions
+      for (const perm of permissions) {
+        await rcon.send(`lp user ${playerName} permission set ${perm} true`).catch(() => {});
+      }
+      
+      // Set primary group
+      await rcon.send(`lp user ${playerName} parent set ${roleId}`).catch(() => {});
+      
       // Tellraw command with colored text
       const tellrawCommand = `tellraw @a {"text":"[PANEL] ${playerName} oyuncusuna ${roleName} rolü verildi!","color":"${color}","bold":true}`;
       
@@ -518,14 +563,15 @@ app.post('/api/roles/assign', verifyToken, requireRole('admin', 'moderator'), as
         success: true, 
         message: 'Role assigned and Minecraft notified',
         playerName,
-        roleName
+        roleName,
+        permissions: permissions.length
       });
     } catch (rconError) {
       console.warn('⚠️ Role saved but RCON notification failed:', rconError.message);
       res.json({ 
         success: true, 
         message: 'Role saved but server notification failed',
-        warning: 'Server might be offline'
+        warning: 'Server might be offline or LuckPerms not installed'
       });
     }
   } catch (error) {
