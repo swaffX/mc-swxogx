@@ -1,0 +1,90 @@
+name: Deploy - Full System
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server.js'
+      - 'public/**'
+      - 'package.json'
+      - 'data/**'
+      - 'docs/**'
+      - 'deploy-roles.sh'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+      
+      - name: 📦 Create deployment archive
+        run: |
+          echo "📦 Creating deployment archive..."
+          tar -czf deploy.tar.gz \
+              server.js \
+              package.json \
+              public/ \
+              data/ \
+              docs/ \
+              deploy-roles.sh \
+              --exclude='node_modules' \
+              --exclude='.git'
+          ls -lh deploy.tar.gz
+      
+      - name: 📤 Upload to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          source: "deploy.tar.gz"
+          target: "/tmp"
+          timeout: 120s
+      
+      - name: 🚀 Deploy to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          timeout: 120s
+          script: |
+            echo "🚀 Starting deployment..."
+            cd /opt/minecraft
+            
+            # Extract files
+            echo "📦 Extracting files..."
+            tar -xzf /tmp/deploy.tar.gz
+            
+            # Create data directory if not exists
+            echo "📁 Creating data directory..."
+            mkdir -p data
+            
+            # Install dependencies
+            echo "📥 Installing dependencies..."
+            npm install --production
+            
+            # Clean session locks
+            echo "🧹 Cleaning session locks..."
+            rm -f world/session.lock 2>/dev/null || true
+            rm -f world_nether/session.lock 2>/dev/null || true
+            rm -f world_the_end/session.lock 2>/dev/null || true
+            
+            # Restart services
+            echo "🔄 Restarting services..."
+            pm2 restart minecraft-api || pm2 start server.js --name minecraft-api
+            pm2 save
+            
+            # Cleanup
+            rm -f /tmp/deploy.tar.gz
+            
+            echo "✅ Deployment completed!"
+            echo "📊 Service status:"
+            pm2 list
