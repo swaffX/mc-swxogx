@@ -148,6 +148,21 @@ async function fetchPlayers() {
         document.getElementById('playersMax').textContent = data.max;
         document.getElementById('playersStat').textContent = `${data.online}/${data.max}`;
         document.getElementById('playersBar').style.width = ((data.online / data.max) * 100) + '%';
+        document.getElementById('playerCount').textContent = data.online;
+        
+        // Oyuncu listesini güncelle
+        const playersList = document.getElementById('playersList');
+        if (data.players && data.players.length > 0) {
+            playersList.innerHTML = data.players.map(player => `
+                <div class="player-item">
+                    <img src="https://mc-heads.net/avatar/${player}/32" alt="${player}" class="player-avatar">
+                    <span class="player-name">${player}</span>
+                    <span class="player-status online"></span>
+                </div>
+            `).join('');
+        } else {
+            playersList.innerHTML = '<div class="no-players">Şu an kimse online değil</div>';
+        }
     } catch (e) { console.error('Players error:', e); }
 }
 

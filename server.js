@@ -3,6 +3,7 @@ const cors = require('cors');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,11 +24,15 @@ app.get('/api/status', (req, res) => {
       const minecraft = processes.find(p => p.name === 'minecraft');
       
       if (minecraft) {
+        // CPU'yu core sayısına böl (multi-core sistemlerde %100'ü geçmesin)
+        const cpuCores = require('os').cpus().length;
+        const normalizedCpu = Math.round((minecraft.monit.cpu / cpuCores) * 10) / 10;
+        
         res.json({
           running: minecraft.pm2_env.status === 'online',
-          uptime: minecraft.pm2_env.pm_uptime,
+          uptime: Date.now() - minecraft.pm2_env.pm_uptime,
           memory: minecraft.monit.memory,
-          cpu: minecraft.monit.cpu,
+          cpu: Math.min(normalizedCpu, 100),
           restarts: minecraft.pm2_env.restart_time
         });
       } else {
@@ -39,22 +44,52 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Oyuncu listesi (server.properties'den max players)
+// Oyuncu listesi (loglardan parse et)
 app.get('/api/players', (req, res) => {
   const propsPath = path.join(__dirname, 'server.properties');
+  const logPath = path.join(__dirname, 'logs', 'latest.log');
   
+  let maxPlayers = 20;
   if (fs.existsSync(propsPath)) {
     const props = fs.readFileSync(propsPath, 'utf8');
-    const maxPlayers = props.match(/max-players=(\d+)/)?.[1] || '20';
-    
-    // Gerçek oyuncu sayısı için logs'u parse edebiliriz
-    res.json({
-      online: 0, // TODO: Parse from logs
-      max: parseInt(maxPlayers)
-    });
-  } else {
-    res.json({ online: 0, max: 20 });
+    maxPlayers = parseInt(props.match(/max-players=(\d+)/)?.[1] || '20');
   }
+  
+  // Loglardan online oyuncuları bul
+  let onlinePlayers = [];
+  if (fs.existsSync(logPath)) {
+    const logs = fs.readFileSync(logPath, 'utf8');
+    const lines = logs.split('\n');
+    
+    // Son 500 satırı kontrol et
+    const recentLines = lines.slice(-500);
+    const joinedPlayers = new Set();
+    const leftPlayers = new Set();
+    
+    for (const line of recentLines) {
+      // Oyuncu giriş: "PlayerName joined the game" veya "PlayerName[/IP:port] logged in"
+      const joinMatch = line.match(/(\w+)\[\/[\d.:]+\] logged in/);
+      const joinMatch2 = line.match(/(\w+) joined the game/);
+      
+      // Oyuncu çıkış: "PlayerName left the game"
+      const leftMatch = line.match(/(\w+) left the game/);
+      const lostMatch = line.match(/(\w+) lost connection/);
+      
+      if (joinMatch) joinedPlayers.add(joinMatch[1]);
+      if (joinMatch2) joinedPlayers.add(joinMatch2[1]);
+      if (leftMatch) leftPlayers.add(leftMatch[1]);
+      if (lostMatch) leftPlayers.add(lostMatch[1]);
+    }
+    
+    // Giren ama çıkmamış oyuncular
+    onlinePlayers = [...joinedPlayers].filter(p => !leftPlayers.has(p));
+  }
+  
+  res.json({
+    online: onlinePlayers.length,
+    max: maxPlayers,
+    players: onlinePlayers
+  });
 });
 
 // Sunucu başlat (duplicate kontrolü ile)
@@ -136,14 +171,26 @@ app.get('/api/logs', (req, res) => {
   }
 });
 
+// MOTD renk kodlarını temizle
+function cleanMotd(motd) {
+  if (!motd) return 'Minecraft Server';
+  // Minecraft renk kodlarını temizle (§x formatı)
+  return motd
+    .replace(/\\u00a7[0-9a-fklmnor]/gi, '')
+    .replace(/§[0-9a-fklmnor]/gi, '')
+    .replace(/\\n/g, ' | ')
+    .trim();
+}
+
 // Sunucu bilgileri
 app.get('/api/info', (req, res) => {
   const propsPath = path.join(__dirname, 'server.properties');
   
   if (fs.existsSync(propsPath)) {
     const props = fs.readFileSync(propsPath, 'utf8');
+    const rawMotd = props.match(/motd=(.+)/)?.[1] || 'Minecraft Server';
     const info = {
-      motd: props.match(/motd=(.+)/)?.[1] || 'Minecraft Server',
+      motd: cleanMotd(rawMotd),
       port: props.match(/server-port=(\d+)/)?.[1] || '25565',
       maxPlayers: props.match(/max-players=(\d+)/)?.[1] || '20',
       difficulty: props.match(/difficulty=(\w+)/)?.[1] || 'normal',
