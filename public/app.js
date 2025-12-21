@@ -6,16 +6,20 @@ const API_URL = '';
 let serverData = { running: false, uptime: 0, memory: 0, cpu: 0, restarts: 0 };
 let serverInfo = { motd: '-', port: '25565', difficulty: '-', gamemode: '-', maxPlayers: 20 };
 let playersData = { online: 0, max: 20 };
+let statsChart = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     renderStatsGrid();
     renderControlCard();
     renderInfoCard();
+    initChart();
     fetchAll();
     setInterval(fetchStatus, 5000);
     setInterval(fetchPlayers, 10000);
     setInterval(fetchLogs, 8000);
+    setInterval(fetchTPS, 10000);
+    setInterval(fetchStatsHistory, 5000);
 });
 
 // Render Stats Grid
@@ -303,4 +307,113 @@ function copyAddress() {
     }).catch(() => {
         showToast('Kopyalama başarısız', 'error');
     });
+}
+
+// Console Command
+async function sendCommand() {
+    const input = document.getElementById('consoleInput');
+    const output = document.getElementById('consoleOutput');
+    const command = input.value.trim();
+    
+    if (!command) return;
+    
+    // Komutu output'a ekle
+    output.innerHTML += `<div class="console-line cmd">> ${command}</div>`;
+    input.value = '';
+    
+    try {
+        const res = await fetch(`${API_URL}/api/command`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            output.innerHTML += `<div class="console-line success">${data.response || 'OK'}</div>`;
+        } else {
+            output.innerHTML += `<div class="console-line error">${data.error}</div>`;
+        }
+    } catch (e) {
+        output.innerHTML += `<div class="console-line error">Hata: ${e.message}</div>`;
+    }
+    
+    output.scrollTop = output.scrollHeight;
+}
+
+// TPS
+async function fetchTPS() {
+    try {
+        const res = await fetch(`${API_URL}/api/tps`);
+        const data = await res.json();
+        const tps = data.tps1m || 0;
+        const badge = document.getElementById('tpsBadge');
+        badge.textContent = `TPS: ${tps.toFixed(1)}`;
+        badge.className = 'tps-badge ' + (tps >= 19 ? 'good' : tps >= 15 ? 'warn' : 'bad');
+    } catch (e) {}
+}
+
+// Chart
+function initChart() {
+    const ctx = document.getElementById('statsChart').getContext('2d');
+    statsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'CPU %',
+                    data: [],
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'RAM (MB)',
+                    data: [],
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: {
+                x: { display: false },
+                y: { 
+                    position: 'left',
+                    min: 0, max: 100,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#9ca3af' }
+                },
+                y1: {
+                    position: 'right',
+                    min: 0,
+                    grid: { display: false },
+                    ticks: { color: '#9ca3af' }
+                }
+            }
+        }
+    });
+}
+
+async function fetchStatsHistory() {
+    try {
+        const res = await fetch(`${API_URL}/api/stats/history`);
+        const data = await res.json();
+        
+        if (data.length > 0 && statsChart) {
+            statsChart.data.labels = data.map((_, i) => i);
+            statsChart.data.datasets[0].data = data.map(d => d.cpu);
+            statsChart.data.datasets[1].data = data.map(d => d.memory);
+            statsChart.update('none');
+        }
+    } catch (e) {}
 }

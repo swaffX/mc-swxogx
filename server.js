@@ -4,6 +4,67 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const net = require('net');
+
+// RCON Client
+class RconClient {
+  constructor(host, port, password) {
+    this.host = host;
+    this.port = port;
+    this.password = password;
+    this.requestId = 0;
+  }
+
+  async send(command) {
+    return new Promise((resolve, reject) => {
+      const socket = new net.Socket();
+      socket.setTimeout(5000);
+      
+      socket.connect(this.port, this.host, () => {
+        // Auth packet
+        const authPacket = this.createPacket(this.requestId++, 3, this.password);
+        socket.write(authPacket);
+      });
+
+      let authenticated = false;
+      let responseData = '';
+
+      socket.on('data', (data) => {
+        if (!authenticated) {
+          authenticated = true;
+          // Command packet
+          const cmdPacket = this.createPacket(this.requestId++, 2, command);
+          socket.write(cmdPacket);
+        } else {
+          // Parse response
+          const length = data.readInt32LE(0);
+          const id = data.readInt32LE(4);
+          const type = data.readInt32LE(8);
+          responseData = data.slice(12, 12 + length - 10).toString('utf8');
+          socket.destroy();
+          resolve(responseData);
+        }
+      });
+
+      socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout')); });
+      socket.on('error', (err) => { reject(err); });
+    });
+  }
+
+  createPacket(id, type, body) {
+    const bodyBuffer = Buffer.from(body, 'utf8');
+    const length = 10 + bodyBuffer.length;
+    const buffer = Buffer.alloc(4 + length);
+    buffer.writeInt32LE(length, 0);
+    buffer.writeInt32LE(id, 4);
+    buffer.writeInt32LE(type, 8);
+    bodyBuffer.copy(buffer, 12);
+    buffer.writeInt16LE(0, 12 + bodyBuffer.length);
+    return buffer;
+  }
+}
+
+const rcon = new RconClient('127.0.0.1', 25575, 'SwxOgx2024Rcon!');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,10 +105,9 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Oyuncu listesi (loglardan parse et)
-app.get('/api/players', (req, res) => {
+// Oyuncu listesi (RCON ile gerçek zamanlı)
+app.get('/api/players', async (req, res) => {
   const propsPath = path.join(__dirname, 'server.properties');
-  const logPath = path.join(__dirname, 'logs', 'latest.log');
   
   let maxPlayers = 20;
   if (fs.existsSync(propsPath)) {
@@ -55,41 +115,52 @@ app.get('/api/players', (req, res) => {
     maxPlayers = parseInt(props.match(/max-players=(\d+)/)?.[1] || '20');
   }
   
-  // Loglardan online oyuncuları bul
-  let onlinePlayers = [];
-  if (fs.existsSync(logPath)) {
-    const logs = fs.readFileSync(logPath, 'utf8');
-    const lines = logs.split('\n');
+  try {
+    // RCON ile online oyuncuları al
+    const response = await rcon.send('list');
+    // Response: "There are X of a max of Y players online: player1, player2"
+    const match = response.match(/There are (\d+) of a max of \d+ players online:?\s*(.*)?/i);
     
-    // Son 500 satırı kontrol et
-    const recentLines = lines.slice(-500);
-    const joinedPlayers = new Set();
-    const leftPlayers = new Set();
+    if (match) {
+      const online = parseInt(match[1]);
+      const playerNames = match[2] ? match[2].split(',').map(p => p.trim()).filter(p => p) : [];
+      
+      res.json({
+        online,
+        max: maxPlayers,
+        players: playerNames
+      });
+    } else {
+      res.json({ online: 0, max: maxPlayers, players: [] });
+    }
+  } catch (e) {
+    // RCON bağlantısı yoksa log'dan parse et
+    const logPath = path.join(__dirname, 'logs', 'latest.log');
+    let onlinePlayers = [];
     
-    for (const line of recentLines) {
-      // Oyuncu giriş: "PlayerName joined the game" veya "PlayerName[/IP:port] logged in"
-      const joinMatch = line.match(/(\w+)\[\/[\d.:]+\] logged in/);
-      const joinMatch2 = line.match(/(\w+) joined the game/);
+    if (fs.existsSync(logPath)) {
+      const logs = fs.readFileSync(logPath, 'utf8');
+      const lines = logs.split('\n').slice(-500);
+      const joinedPlayers = new Set();
+      const leftPlayers = new Set();
       
-      // Oyuncu çıkış: "PlayerName left the game"
-      const leftMatch = line.match(/(\w+) left the game/);
-      const lostMatch = line.match(/(\w+) lost connection/);
+      for (const line of lines) {
+        const joinMatch = line.match(/(\w+)\[\/[\d.:]+\] logged in/);
+        const joinMatch2 = line.match(/(\w+) joined the game/);
+        const leftMatch = line.match(/(\w+) left the game/);
+        const lostMatch = line.match(/(\w+) lost connection/);
+        
+        if (joinMatch) joinedPlayers.add(joinMatch[1]);
+        if (joinMatch2) joinedPlayers.add(joinMatch2[1]);
+        if (leftMatch) leftPlayers.add(leftMatch[1]);
+        if (lostMatch) leftPlayers.add(lostMatch[1]);
+      }
       
-      if (joinMatch) joinedPlayers.add(joinMatch[1]);
-      if (joinMatch2) joinedPlayers.add(joinMatch2[1]);
-      if (leftMatch) leftPlayers.add(leftMatch[1]);
-      if (lostMatch) leftPlayers.add(lostMatch[1]);
+      onlinePlayers = [...joinedPlayers].filter(p => !leftPlayers.has(p));
     }
     
-    // Giren ama çıkmamış oyuncular
-    onlinePlayers = [...joinedPlayers].filter(p => !leftPlayers.has(p));
+    res.json({ online: onlinePlayers.length, max: maxPlayers, players: onlinePlayers });
   }
-  
-  res.json({
-    online: onlinePlayers.length,
-    max: maxPlayers,
-    players: onlinePlayers
-  });
 });
 
 // Sunucu başlat (duplicate kontrolü ile)
@@ -200,6 +271,76 @@ app.get('/api/info', (req, res) => {
   } else {
     res.status(404).json({ error: 'server.properties not found' });
   }
+});
+
+// Konsol komutu gönder (RCON)
+app.post('/api/command', async (req, res) => {
+  const { command } = req.body;
+  
+  if (!command) {
+    return res.status(400).json({ success: false, error: 'Komut gerekli' });
+  }
+  
+  // Tehlikeli komutları engelle
+  const dangerous = ['stop', 'restart', 'op ', 'deop ', 'ban ', 'pardon '];
+  if (dangerous.some(d => command.toLowerCase().startsWith(d))) {
+    return res.status(403).json({ success: false, error: 'Bu komut web panelden çalıştırılamaz' });
+  }
+  
+  try {
+    const response = await rcon.send(command);
+    res.json({ success: true, response: response || 'Komut çalıştırıldı' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: 'RCON bağlantısı kurulamadı: ' + e.message });
+  }
+});
+
+// TPS bilgisi (RCON)
+app.get('/api/tps', async (req, res) => {
+  try {
+    const response = await rcon.send('tps');
+    // Paper TPS response: "TPS from last 1m, 5m, 15m: 20.0, 20.0, 20.0"
+    const match = response.match(/(\d+\.?\d*),\s*(\d+\.?\d*),\s*(\d+\.?\d*)/);
+    if (match) {
+      res.json({
+        tps1m: parseFloat(match[1]),
+        tps5m: parseFloat(match[2]),
+        tps15m: parseFloat(match[3])
+      });
+    } else {
+      res.json({ tps1m: 20, tps5m: 20, tps15m: 20 });
+    }
+  } catch (e) {
+    res.json({ tps1m: 0, tps5m: 0, tps15m: 0, error: 'RCON bağlantısı yok' });
+  }
+});
+
+// İstatistik geçmişi (grafik için)
+let statsHistory = [];
+const MAX_HISTORY = 60; // Son 60 veri noktası (5 dakika)
+
+function recordStats() {
+  exec('pm2 jlist', (error, stdout) => {
+    if (error) return;
+    try {
+      const processes = JSON.parse(stdout);
+      const minecraft = processes.find(p => p.name === 'minecraft');
+      if (minecraft && minecraft.pm2_env.status === 'online') {
+        const cpuCores = os.cpus().length;
+        statsHistory.push({
+          time: Date.now(),
+          cpu: Math.round((minecraft.monit.cpu / cpuCores) * 10) / 10,
+          memory: Math.round(minecraft.monit.memory / 1024 / 1024) // MB
+        });
+        if (statsHistory.length > MAX_HISTORY) statsHistory.shift();
+      }
+    } catch (e) {}
+  });
+}
+setInterval(recordStats, 5000);
+
+app.get('/api/stats/history', (req, res) => {
+  res.json(statsHistory);
 });
 
 app.listen(PORT, () => {

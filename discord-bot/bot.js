@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, SlashCommandBuild
 const { GameDig } = require('gamedig');
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 const config = require('./config.json');
 
 // Config dosyasını kaydet
@@ -9,6 +10,59 @@ function saveConfig() {
     const configPath = path.join(__dirname, 'config.json');
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
+
+// RCON Client
+class RconClient {
+    constructor(host, port, password) {
+        this.host = host;
+        this.port = port;
+        this.password = password;
+        this.requestId = 0;
+    }
+
+    async send(command) {
+        return new Promise((resolve, reject) => {
+            const socket = new net.Socket();
+            socket.setTimeout(5000);
+            
+            socket.connect(this.port, this.host, () => {
+                const authPacket = this.createPacket(this.requestId++, 3, this.password);
+                socket.write(authPacket);
+            });
+
+            let authenticated = false;
+            socket.on('data', (data) => {
+                if (!authenticated) {
+                    authenticated = true;
+                    const cmdPacket = this.createPacket(this.requestId++, 2, command);
+                    socket.write(cmdPacket);
+                } else {
+                    const length = data.readInt32LE(0);
+                    const responseData = data.slice(12, 12 + length - 10).toString('utf8');
+                    socket.destroy();
+                    resolve(responseData);
+                }
+            });
+
+            socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout')); });
+            socket.on('error', (err) => { reject(err); });
+        });
+    }
+
+    createPacket(id, type, body) {
+        const bodyBuffer = Buffer.from(body, 'utf8');
+        const length = 10 + bodyBuffer.length;
+        const buffer = Buffer.alloc(4 + length);
+        buffer.writeInt32LE(length, 0);
+        buffer.writeInt32LE(id, 4);
+        buffer.writeInt32LE(type, 8);
+        bodyBuffer.copy(buffer, 12);
+        buffer.writeInt16LE(0, 12 + bodyBuffer.length);
+        return buffer;
+    }
+}
+
+const rcon = new RconClient(config.minecraft.host, config.minecraft.rconPort || 25575, config.minecraft.rconPassword || 'SwxOgx2024Rcon!');
 
 // Token environment variable'dan al
 const TOKEN = process.env.DISCORD_TOKEN || '';
@@ -24,6 +78,7 @@ const client = new Client({
 // Oyuncu takibi
 let lastPlayers = new Set();
 let serverOnline = false;
+let lastServerStatus = true; // Çöküş bildirimi için
 
 // Slash komutları
 const commands = [
@@ -36,6 +91,12 @@ const commands = [
     new SlashCommandBuilder()
         .setName('ip')
         .setDescription('Sunucu IP adresini gösterir'),
+    new SlashCommandBuilder()
+        .setName('sunucu')
+        .setDescription('Detaylı sunucu bilgisi (TPS, uptime, versiyon)'),
+    new SlashCommandBuilder()
+        .setName('ping')
+        .setDescription('Sunucu bağlantı testi'),
     new SlashCommandBuilder()
         .setName('devlog')
         .setDescription('Geliştirici log mesajı gönderir')
@@ -52,12 +113,29 @@ const commands = [
                 .setRequired(true)
                 .addChoices(
                     { name: 'Giriş/Çıkış Log', value: 'log' },
-                    { name: 'Devlog', value: 'devlog' }
+                    { name: 'Devlog', value: 'devlog' },
+                    { name: 'Sunucu Durumu', value: 'status' }
                 ))
         .addChannelOption(option =>
             option.setName('kanal')
                 .setDescription('Hedef kanal')
                 .setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('whitelist')
+        .setDescription('Whitelist yönetimi')
+        .addStringOption(option =>
+            option.setName('islem')
+                .setDescription('İşlem türü')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Ekle', value: 'add' },
+                    { name: 'Çıkar', value: 'remove' },
+                    { name: 'Liste', value: 'list' }
+                ))
+        .addStringOption(option =>
+            option.setName('oyuncu')
+                .setDescription('Oyuncu adı')
+                .setRequired(false)),
     new SlashCommandBuilder()
         .setName('yardim')
         .setDescription('Bot komutlarını gösterir')
@@ -108,6 +186,20 @@ async function updateStatus() {
         const playerCount = state.players.length;
         const maxPlayers = state.maxplayers;
         
+        // Sunucu tekrar açıldıysa bildir
+        if (!lastServerStatus && config.statusChannelId) {
+            const statusChannel = client.channels.cache.get(config.statusChannelId);
+            if (statusChannel) {
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('🟢 Sunucu Tekrar Açıldı!')
+                    .setDescription('Minecraft sunucusu tekrar çevrimiçi.')
+                    .setTimestamp();
+                statusChannel.send({ embeds: [embed] });
+            }
+        }
+        lastServerStatus = true;
+        
         client.user.setPresence({
             activities: [{
                 name: `${playerCount}/${maxPlayers} oyuncu`,
@@ -117,6 +209,21 @@ async function updateStatus() {
         });
     } catch (error) {
         serverOnline = false;
+        
+        // Sunucu çöktüyse bildir
+        if (lastServerStatus && config.statusChannelId) {
+            const statusChannel = client.channels.cache.get(config.statusChannelId);
+            if (statusChannel) {
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('🔴 Sunucu Çevrimdışı!')
+                    .setDescription('Minecraft sunucusu çevrimdışı oldu. Yöneticiler bilgilendirildi.')
+                    .setTimestamp();
+                statusChannel.send({ embeds: [embed] });
+            }
+        }
+        lastServerStatus = false;
+        
         client.user.setPresence({
             activities: [{
                 name: 'Sunucu çevrimdışı',
@@ -286,6 +393,9 @@ client.on('interactionCreate', async interaction => {
                 { name: '/durum', value: 'Sunucu durumunu gösterir', inline: true },
                 { name: '/oyuncular', value: 'Online oyuncuları listeler', inline: true },
                 { name: '/ip', value: 'Sunucu IP adresini gösterir', inline: true },
+                { name: '/sunucu', value: 'Detaylı sunucu bilgisi', inline: true },
+                { name: '/ping', value: 'Bağlantı testi', inline: true },
+                { name: '/whitelist', value: 'Whitelist yönetimi', inline: true },
                 { name: '/devlog', value: 'Geliştirici logu gönderir', inline: true },
                 { name: '/kanalayarla', value: 'Kanal ID\'lerini ayarlar', inline: true },
                 { name: '/yardim', value: 'Bu mesajı gösterir', inline: true }
@@ -293,6 +403,134 @@ client.on('interactionCreate', async interaction => {
             .setFooter({ text: 'SWXOQX Discord Bot' });
         
         await interaction.reply({ embeds: [embed] });
+    }
+    
+    else if (commandName === 'sunucu') {
+        await interaction.deferReply();
+        
+        try {
+            const state = await GameDig.query({
+                type: 'minecraft',
+                host: config.minecraft.host,
+                port: config.minecraft.port
+            });
+            
+            // TPS al (RCON)
+            let tpsInfo = 'Bilinmiyor';
+            try {
+                const tpsResponse = await rcon.send('tps');
+                const match = tpsResponse.match(/(\d+\.?\d*),\s*(\d+\.?\d*),\s*(\d+\.?\d*)/);
+                if (match) {
+                    tpsInfo = `1m: ${match[1]} | 5m: ${match[2]} | 15m: ${match[3]}`;
+                }
+            } catch (e) {}
+            
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('🖥️ Detaylı Sunucu Bilgisi')
+                .setThumbnail('https://mc-api.net/v3/server/favicon/' + config.minecraft.host)
+                .addFields(
+                    { name: '📊 Durum', value: '🟢 Çevrimiçi', inline: true },
+                    { name: '👥 Oyuncular', value: `${state.players.length}/${state.maxplayers}`, inline: true },
+                    { name: '🏷️ Sürüm', value: state.version || 'Bilinmiyor', inline: true },
+                    { name: '⚡ TPS', value: tpsInfo, inline: false },
+                    { name: '🎮 Oyun Modu', value: 'Survival', inline: true },
+                    { name: '📍 IP', value: `\`swxogx.mooo.com\``, inline: true }
+                )
+                .setTimestamp()
+                .setFooter({ text: 'SWXOQX Minecraft' });
+            
+            await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+            const embed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle('🖥️ Detaylı Sunucu Bilgisi')
+                .setDescription('❌ Sunucu çevrimdışı veya erişilemiyor.')
+                .setTimestamp();
+            
+            await interaction.editReply({ embeds: [embed] });
+        }
+    }
+    
+    else if (commandName === 'ping') {
+        const start = Date.now();
+        await interaction.deferReply();
+        
+        try {
+            await GameDig.query({
+                type: 'minecraft',
+                host: config.minecraft.host,
+                port: config.minecraft.port
+            });
+            
+            const ping = Date.now() - start;
+            const status = ping < 100 ? '🟢 Mükemmel' : ping < 200 ? '🟡 İyi' : '🔴 Yavaş';
+            
+            const embed = new EmbedBuilder()
+                .setColor(ping < 100 ? 0x00FF00 : ping < 200 ? 0xFFFF00 : 0xFF0000)
+                .setTitle('🏓 Bağlantı Testi')
+                .addFields(
+                    { name: '📶 Ping', value: `${ping}ms`, inline: true },
+                    { name: '📊 Durum', value: status, inline: true }
+                )
+                .setTimestamp();
+            
+            await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+            const embed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle('🏓 Bağlantı Testi')
+                .setDescription('❌ Sunucuya bağlanılamadı!')
+                .setTimestamp();
+            
+            await interaction.editReply({ embeds: [embed] });
+        }
+    }
+    
+    else if (commandName === 'whitelist') {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return interaction.reply({ content: '❌ Bu komutu kullanmak için yönetici yetkisine sahip olmalısın!', ephemeral: true });
+        }
+        
+        const islem = interaction.options.getString('islem');
+        const oyuncu = interaction.options.getString('oyuncu');
+        
+        await interaction.deferReply();
+        
+        try {
+            if (islem === 'list') {
+                const response = await rcon.send('whitelist list');
+                const embed = new EmbedBuilder()
+                    .setColor(0x5865F2)
+                    .setTitle('📋 Whitelist')
+                    .setDescription(response || 'Whitelist boş')
+                    .setTimestamp();
+                
+                await interaction.editReply({ embeds: [embed] });
+            } else if (islem === 'add' && oyuncu) {
+                const response = await rcon.send(`whitelist add ${oyuncu}`);
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('✅ Whitelist Güncellendi')
+                    .setDescription(`**${oyuncu}** whitelist'e eklendi.\n\`${response}\``)
+                    .setTimestamp();
+                
+                await interaction.editReply({ embeds: [embed] });
+            } else if (islem === 'remove' && oyuncu) {
+                const response = await rcon.send(`whitelist remove ${oyuncu}`);
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('🗑️ Whitelist Güncellendi')
+                    .setDescription(`**${oyuncu}** whitelist'ten çıkarıldı.\n\`${response}\``)
+                    .setTimestamp();
+                
+                await interaction.editReply({ embeds: [embed] });
+            } else {
+                await interaction.editReply('❌ Oyuncu adı gerekli!');
+            }
+        } catch (error) {
+            await interaction.editReply('❌ RCON bağlantısı kurulamadı: ' + error.message);
+        }
     }
     
     else if (commandName === 'kanalayarla') {
@@ -323,6 +561,17 @@ client.on('interactionCreate', async interaction => {
                 .setColor(0x9B59B6)
                 .setTitle('✅ Devlog Kanalı Ayarlandı')
                 .setDescription(`Geliştirici logları artık <#${kanal.id}> kanalına gönderilecek.`)
+                .setTimestamp();
+            
+            await interaction.reply({ embeds: [embed] });
+        } else if (tip === 'status') {
+            config.statusChannelId = kanal.id;
+            saveConfig();
+            
+            const embed = new EmbedBuilder()
+                .setColor(0x3498DB)
+                .setTitle('✅ Durum Kanalı Ayarlandı')
+                .setDescription(`Sunucu durum bildirimleri artık <#${kanal.id}> kanalına gönderilecek.`)
                 .setTimestamp();
             
             await interaction.reply({ embeds: [embed] });
