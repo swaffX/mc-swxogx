@@ -79,22 +79,22 @@
             position: relative;
             z-index: 1;
             text-align: center;
-            padding: 60px 40px;
+            padding: 32px 32px;
             background: rgba(17, 24, 39, 0.7);
             backdrop-filter: blur(30px) saturate(180%);
             border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 32px;
+            border-radius: 24px;
             box-shadow: 
-                0 30px 80px rgba(0, 0, 0, 0.6),
+                0 20px 60px rgba(0, 0, 0, 0.6),
                 0 0 0 1px rgba(239, 68, 68, 0.1) inset,
                 0 10px 40px rgba(239, 68, 68, 0.2);
-            max-width: 600px;
+            max-width: 480px;
             width: 90%;
         }
 
         .denied-icon {
-            font-size: 100px;
-            margin-bottom: 24px;
+            font-size: 64px;
+            margin-bottom: 16px;
             display: inline-block;
             animation: shake 0.5s ease-in-out;
             filter: drop-shadow(0 10px 30px rgba(239, 68, 68, 0.5));
@@ -107,13 +107,13 @@
         }
 
         .denied-title {
-            font-size: 48px;
+            font-size: 32px;
             font-weight: 900;
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
             background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             animation: gradientFlow 5s ease infinite;
             letter-spacing: -1px;
         }
@@ -124,28 +124,24 @@
         }
 
         .denied-subtitle {
-            font-size: 20px;
+            font-size: 16px;
             color: #fca5a5;
-            margin-bottom: 32px;
+            margin-bottom: 20px;
             font-weight: 600;
         }
 
         .denied-message {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 32px;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
         }
 
         .denied-message p {
-            font-size: 16px;
+            font-size: 14px;
             color: #d1d5db;
-            line-height: 1.8;
-            margin-bottom: 16px;
-        }
-
-        .denied-message p:last-child {
+            line-height: 1.6;
             margin-bottom: 0;
         }
 
@@ -163,24 +159,24 @@
         .denied-info {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-bottom: 32px;
+            gap: 8px;
+            margin-bottom: 20px;
         }
 
         .info-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 16px;
+            gap: 10px;
+            padding: 12px;
             background: rgba(239, 68, 68, 0.05);
             border: 1px solid rgba(239, 68, 68, 0.1);
-            border-radius: 12px;
-            font-size: 14px;
+            border-radius: 10px;
+            font-size: 13px;
             color: #d1d5db;
         }
 
         .info-icon {
-            font-size: 24px;
+            font-size: 20px;
             flex-shrink: 0;
         }
 
@@ -198,7 +194,7 @@
 
         .info-value {
             color: #9ca3af;
-            font-size: 13px;
+            font-size: 12px;
             word-break: break-all;
         }
 
@@ -245,10 +241,10 @@
         }
 
         .denied-footer {
-            margin-top: 32px;
-            padding-top: 24px;
+            margin-top: 20px;
+            padding-top: 16px;
             border-top: 1px solid rgba(239, 68, 68, 0.1);
-            font-size: 13px;
+            font-size: 12px;
             color: #6b7280;
         }
 
@@ -264,15 +260,15 @@
 
         @media (max-width: 640px) {
             .denied-container {
-                padding: 40px 24px;
+                padding: 24px 20px;
             }
 
             .denied-title {
-                font-size: 36px;
+                font-size: 28px;
             }
 
             .denied-icon {
-                font-size: 80px;
+                font-size: 56px;
             }
 
             .denied-actions {
@@ -297,8 +293,7 @@
         <p class="denied-subtitle">Unauthorized Access Attempt</p>
 
         <div class="denied-message">
-            <p><strong>Your account is not authorized to access this panel.</strong></p>
-            <p>This is a restricted developer-only control panel. Only whitelisted Google accounts can access this system.</p>
+            <p>This is a restricted developer-only control panel. Only whitelisted accounts can access this system.</p>
         </div>
 
         <div class="denied-info">
@@ -330,10 +325,6 @@
                 <span>🔙</span>
                 <span>Back to Login</span>
             </a>
-            <button onclick="copyUID()" class="btn btn-secondary" id="copyBtn">
-                <span>📋</span>
-                <span>Copy UID</span>
-            </button>
         </div>
 
         <div class="denied-footer">
@@ -350,21 +341,7 @@
         document.getElementById('userEmail').textContent = userEmail;
         document.getElementById('userUID').textContent = userUID;
 
-        // UID kopyalama
-        function copyUID() {
-            const uid = localStorage.getItem('userUID');
-            if (uid) {
-                navigator.clipboard.writeText(uid).then(() => {
-                    const btn = document.getElementById('copyBtn');
-                    btn.innerHTML = '<span>✅</span><span>Copied!</span>';
-                    setTimeout(() => {
-                        btn.innerHTML = '<span>📋</span><span>Copy UID</span>';
-                    }, 2000);
-                });
-            }
-        }
-
-        // 5 saniye sonra otomatik çıkış
+        // 10 saniye sonra otomatik çıkış
         setTimeout(() => {
             localStorage.clear();
             window.location.href = '/login.html';

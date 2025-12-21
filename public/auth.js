@@ -12,8 +12,7 @@ const firebaseConfig = {
 // Whitelist - Sadece bu UID'lere sahip kullanıcılar erişebilir
 // Firebase Console > Authentication > Users bölümünden UID'leri alabilirsiniz
 const AUTHORIZED_UIDS = [
-    // Buraya yetkili kullanıcıların Firebase UID'lerini ekleyin
-    // Örnek: "abc123xyz456def789ghi012jkl345mno678"
+    "P2xHD09hwFaXf6Ci2RE4zlZYYnc2" // Admin
 ];
 
 // Firebase SDK'yı dinamik olarak yükle
