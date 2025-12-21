@@ -125,13 +125,22 @@ async function verifyToken(req, res, next) {
 
 // Whitelist kontrolü
 function isAuthorized(uid) {
-    // Eğer whitelist boşsa, tüm kullanıcılara izin ver (ilk kurulum için)
+    // GÜVENLIK: Whitelist boşsa ASLA izin verme!
     if (AUTHORIZED_UIDS.length === 0) {
-        console.warn('⚠️  Whitelist is empty! All authenticated users will be allowed.');
-        return true;
+        console.error('🚫 SECURITY: Whitelist is empty! Access denied to all users.');
+        console.error('📝 Add UIDs to AUTHORIZED_UIDS array in middleware/auth.js');
+        return false; // Whitelist boşsa kimseye izin verme
     }
     
-    return AUTHORIZED_UIDS.includes(uid);
+    const isAllowed = AUTHORIZED_UIDS.includes(uid);
+    
+    if (!isAllowed) {
+        console.warn(`🚫 Backend: Access denied for UID: ${uid}`);
+    } else {
+        console.log(`✅ Backend: Access granted for UID: ${uid}`);
+    }
+    
+    return isAllowed;
 }
 
 // Rol kontrolü middleware

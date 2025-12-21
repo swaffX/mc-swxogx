@@ -55,10 +55,19 @@ async function initFirebase() {
                         window.location.href = '/checking.html';
                     }, 1000);
                 } else {
-                    // Yetkisiz kullanıcı, çıkış yap ve hata göster
-                    showAccessDenied();
+                    // Yetkisiz kullanıcı, bilgileri kaydet ve access denied sayfasına yönlendir
+                    localStorage.setItem('userEmail', user.email);
+                    localStorage.setItem('userUID', user.uid);
+                    
+                    console.error('🚫 Access denied for:', user.email);
+                    console.error('🔑 UID:', user.uid);
+                    console.error('📝 Add this UID to AUTHORIZED_UIDS array');
+                    
                     await auth.signOut();
                     hideLoading();
+                    
+                    // Access denied sayfasına yönlendir
+                    window.location.href = '/access-denied.html';
                 }
             } else {
                 hideLoading();
@@ -78,13 +87,22 @@ async function initFirebase() {
 
 // Whitelist kontrolü
 function isAuthorized(uid) {
-    // Eğer whitelist boşsa, tüm kullanıcılara izin ver (ilk kurulum için)
+    // GÜVENLIK: Whitelist boşsa ASLA izin verme!
     if (AUTHORIZED_UIDS.length === 0) {
-        console.warn('⚠️  Whitelist is empty! All users will be allowed. Add UIDs to AUTHORIZED_UIDS array.');
-        return true;
+        console.error('🚫 SECURITY: Whitelist is empty! Access denied to all users.');
+        console.error('📝 Add UIDs to AUTHORIZED_UIDS array in public/auth.js');
+        return false; // Whitelist boşsa kimseye izin verme
     }
     
-    return AUTHORIZED_UIDS.includes(uid);
+    const isAllowed = AUTHORIZED_UIDS.includes(uid);
+    
+    if (!isAllowed) {
+        console.warn(`🚫 Access denied for UID: ${uid}`);
+    } else {
+        console.log(`✅ Access granted for UID: ${uid}`);
+    }
+    
+    return isAllowed;
 }
 
 // Google Sign In
