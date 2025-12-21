@@ -2,6 +2,7 @@ package com.server.timehud;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -25,6 +26,7 @@ public class TimeHUD extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("timehud").setExecutor(new TimeHUDCommand(this));
         
+        // Scoreboard HUD - her saniye
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -35,6 +37,18 @@ public class TimeHUD extends JavaPlugin implements Listener {
                 }
             }
         }.runTaskTimer(this, 0L, 20L);
+        
+        // Koordinat ve pusula - her 5 tick (daha smooth)
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (isHUDEnabled(player)) {
+                        updateCompass(player);
+                    }
+                }
+            }
+        }.runTaskTimer(this, 0L, 5L);
     }
     
     @Override
@@ -183,5 +197,53 @@ public class TimeHUD extends JavaPlugin implements Listener {
     
     private void removeHUD(Player player) {
         player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+    }
+    
+    private void updateCompass(Player player) {
+        // Koordinatlar
+        int x = player.getLocation().getBlockX();
+        int y = player.getLocation().getBlockY();
+        int z = player.getLocation().getBlockZ();
+        
+        // Yön hesapla
+        float yaw = player.getLocation().getYaw();
+        yaw = (yaw % 360 + 360) % 360; // 0-360 arası normalize et
+        
+        String direction;
+        String arrow;
+        
+        if (yaw >= 337.5 || yaw < 22.5) {
+            direction = "Güney";
+            arrow = "⬇";
+        } else if (yaw >= 22.5 && yaw < 67.5) {
+            direction = "Güneybatı";
+            arrow = "⬋";
+        } else if (yaw >= 67.5 && yaw < 112.5) {
+            direction = "Batı";
+            arrow = "⬅";
+        } else if (yaw >= 112.5 && yaw < 157.5) {
+            direction = "Kuzeybatı";
+            arrow = "⬉";
+        } else if (yaw >= 157.5 && yaw < 202.5) {
+            direction = "Kuzey";
+            arrow = "⬆";
+        } else if (yaw >= 202.5 && yaw < 247.5) {
+            direction = "Kuzeydoğu";
+            arrow = "⬈";
+        } else if (yaw >= 247.5 && yaw < 292.5) {
+            direction = "Doğu";
+            arrow = "➡";
+        } else {
+            direction = "Güneydoğu";
+            arrow = "⬊";
+        }
+        
+        String compassText = ChatColor.YELLOW + arrow + " " + ChatColor.WHITE + direction + 
+                            ChatColor.DARK_GRAY + " | " + 
+                            ChatColor.RED + "X:" + ChatColor.WHITE + x + " " +
+                            ChatColor.GREEN + "Y:" + ChatColor.WHITE + y + " " +
+                            ChatColor.AQUA + "Z:" + ChatColor.WHITE + z;
+        
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(compassText));
     }
 }
