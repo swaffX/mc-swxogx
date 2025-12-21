@@ -35,7 +35,8 @@ jobs:
               public/ \
               docs/ \
               data/ \
-              deploy-roles.sh
+              deploy-roles.sh \
+              restart-minecraft.sh
           ls -lh deploy.tar.gz
       
       - name: 📤 Upload to VPS
@@ -67,6 +68,11 @@ jobs:
             # Extract files (overwrites existing)
             echo "📦 Extracting files..."
             tar -xzf /tmp/deploy.tar.gz
+            
+            # Make scripts executable
+            echo "🔧 Setting executable permissions..."
+            chmod +x deploy-roles.sh 2>/dev/null || true
+            chmod +x restart-minecraft.sh 2>/dev/null || true
             
             # Create data directory if not exists
             echo "📁 Ensuring data directory..."
