@@ -7,7 +7,6 @@ on:
       - 'server.js'
       - 'public/**'
       - 'package.json'
-      - 'data/**'
       - 'docs/**'
       - 'deploy-roles.sh'
       - '.github/workflows/deploy.yml'
@@ -25,15 +24,17 @@ jobs:
       - name: 📦 Create deployment archive
         run: |
           echo "📦 Creating deployment archive..."
+          # Create data directory if it doesn't exist
+          mkdir -p data
           tar -czf deploy.tar.gz \
               server.js \
               package.json \
               public/ \
-              data/ \
               docs/ \
               deploy-roles.sh \
               --exclude='node_modules' \
-              --exclude='.git'
+              --exclude='.git' \
+              --exclude='data/*.json'
           ls -lh deploy.tar.gz
       
       - name: 📤 Upload to VPS
