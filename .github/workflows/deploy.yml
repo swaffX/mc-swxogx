@@ -90,3 +90,6 @@ jobs:
             echo "✅ Deployment completed!"
             echo "📊 Service status:"
             pm2 list
+            echo "🔍 Checking API endpoints..."
+            sleep 2
+            curl -s http://localhost:3000/api/roles/players || echo "API check failed"
