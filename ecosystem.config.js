@@ -6,6 +6,7 @@ module.exports = {
       args: [
         '-Xms2G',
         '-Xmx6G',
+        // Port: 25566 (server.properties'te ayarlı)
         '-XX:+UseG1GC',
         '-XX:+ParallelRefProcEnabled',
         '-XX:MaxGCPauseMillis=200',
