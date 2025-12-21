@@ -55,6 +55,7 @@ swxogx-minecraft-firebase-adminsdk-*.json
 
 # User Data
 data/user-roles.json
+data/player-roles.json
 
 # Temp
 *.tmp

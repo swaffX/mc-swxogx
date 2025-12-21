@@ -470,6 +470,86 @@ app.post('/api/server/restart', verifyToken, requireRole('admin', 'moderator'), 
   });
 });
 
+// Role assignment endpoint - Real-time Minecraft integration
+app.post('/api/roles/assign', verifyToken, requireRole('admin', 'moderator'), async (req, res) => {
+  const { playerName, roleId, roleName } = req.body;
+  
+  if (!playerName || !roleId || !roleName) {
+    return res.status(400).json({ success: false, error: 'Missing required fields' });
+  }
+  
+  try {
+    // Save role assignment to JSON file
+    const rolesPath = path.join(__dirname, 'data', 'player-roles.json');
+    const dataDir = path.dirname(rolesPath);
+    
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    let playerRoles = {};
+    if (fs.existsSync(rolesPath)) {
+      playerRoles = JSON.parse(fs.readFileSync(rolesPath, 'utf8'));
+    }
+    
+    playerRoles[playerName] = { roleId, roleName, assignedAt: new Date().toISOString() };
+    fs.writeFileSync(rolesPath, JSON.stringify(playerRoles, null, 2));
+    
+    // Send colored message to Minecraft server via RCON
+    try {
+      // Role colors for Minecraft chat
+      const roleColors = {
+        admin: 'red',
+        moderator: 'gold',
+        vip: 'light_purple',
+        player: 'green'
+      };
+      
+      const color = roleColors[roleId] || 'aqua';
+      
+      // Tellraw command with colored text
+      const tellrawCommand = `tellraw @a {"text":"[PANEL] ${playerName} oyuncusuna ${roleName} rolü verildi!","color":"${color}","bold":true}`;
+      
+      await rcon.send(tellrawCommand);
+      
+      console.log(`✅ Role assigned: ${playerName} -> ${roleName} (notified in-game)`);
+      
+      res.json({ 
+        success: true, 
+        message: 'Role assigned and Minecraft notified',
+        playerName,
+        roleName
+      });
+    } catch (rconError) {
+      console.warn('⚠️ Role saved but RCON notification failed:', rconError.message);
+      res.json({ 
+        success: true, 
+        message: 'Role saved but server notification failed',
+        warning: 'Server might be offline'
+      });
+    }
+  } catch (error) {
+    console.error('Role assignment error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get player roles
+app.get('/api/roles/players', verifyToken, (req, res) => {
+  try {
+    const rolesPath = path.join(__dirname, 'data', 'player-roles.json');
+    
+    if (fs.existsSync(rolesPath)) {
+      const playerRoles = JSON.parse(fs.readFileSync(rolesPath, 'utf8'));
+      res.json({ success: true, roles: playerRoles });
+    } else {
+      res.json({ success: true, roles: {} });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // İstatistik geçmişi (grafik için)
 let statsHistory = [];
 const MAX_HISTORY = 60; // Son 60 veri noktası (5 dakika)

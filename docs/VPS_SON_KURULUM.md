@@ -205,6 +205,40 @@ pages/dashboard.html
 
 6. **Dashboard'u kullan!** 🎉
 
+## 🎭 Real-Time Rol Sistemi
+
+### Özellikler
+
+✅ **Web panelden rol atama**
+- Admin, Moderator, VIP, Player rolleri
+- Rol oluşturma, düzenleme, silme
+- İzin yönetimi
+
+✅ **Minecraft entegrasyonu**
+- Rol atandığında Minecraft'ta renkli bildirim
+- RCON ile gerçek zamanlı iletişim
+- Sunucu offline olsa bile rol kaydedilir
+
+✅ **Kalıcı veri saklama**
+- Roller `data/player-roles.json` dosyasında
+- Sunucu yeniden başlatılsa bile korunur
+
+### Kullanım
+
+1. Dashboard'da **"Role Manager"** sekmesine git
+2. **"Player Roles"** bölümünde online oyuncuları gör
+3. Dropdown'dan rol seç
+4. Onay dialogunda "OK" tıkla
+5. Minecraft'ta renkli bildirim görünür! 🎉
+
+**Örnek bildirim:**
+```
+[PANEL] SwxOgx oyuncusuna VIP rolü verildi!
+```
+
+**Detaylı bilgi:** `docs/ROL_SISTEMI.md`
+**Test rehberi:** `docs/ROL_TEST.md`
+
 ## 📝 Notlar
 
 - ✅ Tüm .md dosyaları `docs/` klasöründe

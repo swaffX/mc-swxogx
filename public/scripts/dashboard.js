@@ -423,15 +423,22 @@ async function loadPlayerRoles() {
     if (!listDiv) return;
     
     try {
-        const res = await fetch('/api/players', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
+        // Fetch both online players and saved roles
+        const [playersRes, rolesRes] = await Promise.all([
+            fetch('/api/players', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('/api/roles/players', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
         
-        if (data.players && data.players.length > 0) {
-            listDiv.innerHTML = data.players.map(playerName => {
-                const playerRole = localStorage.getItem(`player_role_${playerName}`) || 'player';
-                const roles = JSON.parse(localStorage.getItem('serverRoles') || JSON.stringify(defaultRoles));
+        const playersData = await playersRes.json();
+        const rolesData = await rolesRes.json();
+        const savedRoles = rolesData.roles || {};
+        
+        if (playersData.players && playersData.players.length > 0) {
+            const roles = JSON.parse(localStorage.getItem('serverRoles') || JSON.stringify(defaultRoles));
+            
+            listDiv.innerHTML = playersData.players.map(playerName => {
+                // Get role from server first, fallback to localStorage, then default to 'player'
+                const playerRole = savedRoles[playerName]?.roleId || localStorage.getItem(`player_role_${playerName}`) || 'player';
                 const role = roles[playerRole] || roles.player;
                 
                 return `
@@ -456,6 +463,7 @@ async function loadPlayerRoles() {
             listDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No players online</p>';
         }
     } catch (error) {
+        console.error('Load player roles error:', error);
         listDiv.innerHTML = '<p style="color: var(--danger);">Failed to load players</p>';
     }
 }
@@ -507,9 +515,49 @@ function deleteRole(roleId) {
 }
 
 function changePlayerRole(playerName, newRole) {
+    const roles = JSON.parse(localStorage.getItem('serverRoles') || JSON.stringify(defaultRoles));
+    const role = roles[newRole];
+    
+    // Show confirmation dialog
+    const confirmed = confirm(`${playerName} oyuncusuna "${role.name}" rolü verilsin mi?`);
+    if (!confirmed) return;
+    
+    // Save locally
     localStorage.setItem(`player_role_${playerName}`, newRole);
-    showToast(`${playerName}'s role changed!`, 'success');
+    
+    // Send to server
+    saveRoleToServer(playerName, newRole, role.name);
+    
+    showToast(`${playerName}'s role changed to ${role.name}!`, 'success');
     loadPlayerRoles();
+}
+
+async function saveRoleToServer(playerName, roleId, roleName) {
+    try {
+        const res = await fetch('/api/roles/assign', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                playerName,
+                roleId,
+                roleName
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast(`✅ Role saved! Minecraft notification sent.`, 'success');
+        } else {
+            showToast(`⚠️ Role saved locally, but server notification failed.`, 'warning');
+        }
+    } catch (error) {
+        console.error('Save role error:', error);
+        showToast(`⚠️ Role saved locally only.`, 'warning');
+    }
 }
 
 // API Calls
