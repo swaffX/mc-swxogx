@@ -1,0 +1,72 @@
+# TimeHUD Plugin Configuration
+# =============================
+
+# HUD Ayarları
+hud:
+  # HUD varsayılan olarak açık mı?
+  enabled-by-default: true
+  
+  # Scoreboard başlığı
+  title: "&6&l⚡ SWXOQX ⚡"
+  
+  # Güncelleme aralığı (tick cinsinden, 20 tick = 1 saniye)
+  update-interval: 20
+  
+  # Pusula güncelleme aralığı (daha smooth için düşük)
+  compass-update-interval: 5
+
+# Mesajlar
+messages:
+  # Giriş mesajı
+  join-message: "&a{player} sunucuya katıldı!"
+  developer-join-message: "&c⚡ Geliştirici &b{player} &7sunucuya katıldı!"
+  
+  # Hoşgeldin başlığı
+  welcome-title: "&6★ &fHoş Geldin &6★"
+  welcome-subtitle: "&aİyi oyunlar!"
+  
+  # Action bar mesajı
+  welcome-actionbar: "&e⚡ &fSWXOQX Sunucusuna Hoş Geldin! &e⚡"
+
+# Geliştiriciler (küçük harfle)
+developers:
+  - "swxff"
+  - "ouz"
+
+# Zaman dilimleri
+time-periods:
+  morning:
+    name: "Sabah"
+    emoji: "☀"
+    color: "&e"
+    start-hour: 6
+    end-hour: 12
+  afternoon:
+    name: "Öğleden Sonra"
+    emoji: "☀"
+    color: "&6"
+    start-hour: 12
+    end-hour: 18
+  evening:
+    name: "Akşam"
+    emoji: "☽"
+    color: "&d"
+    start-hour: 18
+    end-hour: 21
+  night:
+    name: "Gece"
+    emoji: "☾"
+    color: "&5"
+    start-hour: 21
+    end-hour: 6
+
+# Pusula yönleri
+compass:
+  north: "Kuzey"
+  south: "Güney"
+  east: "Doğu"
+  west: "Batı"
+  northeast: "Kuzeydoğu"
+  northwest: "Kuzeybatı"
+  southeast: "Güneydoğu"
+  southwest: "Güneybatı"

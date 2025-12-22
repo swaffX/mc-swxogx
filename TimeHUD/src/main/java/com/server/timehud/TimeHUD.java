@@ -3,6 +3,7 @@ package com.server.timehud;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,15 +19,33 @@ import java.util.*;
 public class TimeHUD extends JavaPlugin implements Listener {
     
     private HashMap<UUID, Boolean> hudEnabled = new HashMap<>();
-    private static final Set<String> DEVELOPERS = new HashSet<>(Arrays.asList("swxff", "ouz"));
+    private Set<String> developers = new HashSet<>();
+    
+    // Config değerleri
+    private String hudTitle;
+    private int hudUpdateInterval;
+    private int compassUpdateInterval;
+    private boolean enabledByDefault;
+    private String joinMessage;
+    private String devJoinMessage;
+    private String welcomeTitle;
+    private String welcomeSubtitle;
+    private String welcomeActionbar;
     
     @Override
     public void onEnable() {
+        // Config dosyasını oluştur/yükle
+        saveDefaultConfig();
+        loadConfiguration();
+        
         getLogger().info("TimeHUD plugin enabled!");
         getServer().getPluginManager().registerEvents(this, this);
-        getCommand("timehud").setExecutor(new TimeHUDCommand(this));
         
-        // Scoreboard HUD - her saniye
+        TimeHUDCommand cmdExecutor = new TimeHUDCommand(this);
+        getCommand("timehud").setExecutor(cmdExecutor);
+        getCommand("timehud").setTabCompleter(cmdExecutor);
+        
+        // Scoreboard HUD
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -36,9 +55,9 @@ public class TimeHUD extends JavaPlugin implements Listener {
                     }
                 }
             }
-        }.runTaskTimer(this, 0L, 20L);
+        }.runTaskTimer(this, 0L, hudUpdateInterval);
         
-        // Koordinat ve pusula - her 5 tick (daha smooth)
+        // Koordinat ve pusula
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -48,7 +67,39 @@ public class TimeHUD extends JavaPlugin implements Listener {
                     }
                 }
             }
-        }.runTaskTimer(this, 0L, 5L);
+        }.runTaskTimer(this, 0L, compassUpdateInterval);
+    }
+    
+    public void loadConfiguration() {
+        FileConfiguration config = getConfig();
+        
+        // HUD ayarları
+        enabledByDefault = config.getBoolean("hud.enabled-by-default", true);
+        hudTitle = ChatColor.translateAlternateColorCodes('&', 
+            config.getString("hud.title", "&6&l⚡ SWXOQX ⚡"));
+        hudUpdateInterval = config.getInt("hud.update-interval", 20);
+        compassUpdateInterval = config.getInt("hud.compass-update-interval", 5);
+        
+        // Mesajlar
+        joinMessage = ChatColor.translateAlternateColorCodes('&',
+            config.getString("messages.join-message", "&a{player} sunucuya katıldı!"));
+        devJoinMessage = ChatColor.translateAlternateColorCodes('&',
+            config.getString("messages.developer-join-message", "&c⚡ Geliştirici &b{player} &7sunucuya katıldı!"));
+        welcomeTitle = ChatColor.translateAlternateColorCodes('&',
+            config.getString("messages.welcome-title", "&6★ &fHoş Geldin &6★"));
+        welcomeSubtitle = ChatColor.translateAlternateColorCodes('&',
+            config.getString("messages.welcome-subtitle", "&aİyi oyunlar!"));
+        welcomeActionbar = ChatColor.translateAlternateColorCodes('&',
+            config.getString("messages.welcome-actionbar", "&e⚡ &fSWXOQX Sunucusuna Hoş Geldin! &e⚡"));
+        
+        // Geliştiriciler
+        developers.clear();
+        List<String> devList = config.getStringList("developers");
+        for (String dev : devList) {
+            developers.add(dev.toLowerCase());
+        }
+        
+        getLogger().info("Configuration loaded! Developers: " + developers.size());
     }
     
     @Override
@@ -63,14 +114,14 @@ public class TimeHUD extends JavaPlugin implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         String playerName = player.getName();
-        boolean isDev = DEVELOPERS.contains(playerName.toLowerCase());
+        boolean isDev = developers.contains(playerName.toLowerCase());
         
         event.setJoinMessage(null);
         Bukkit.broadcastMessage("");
         if (isDev) {
-            Bukkit.broadcastMessage(ChatColor.GOLD + "  ⚡ " + ChatColor.RED + "Geliştirici " + ChatColor.AQUA + playerName + ChatColor.GRAY + " sunucuya katıldı!");
+            Bukkit.broadcastMessage("  " + devJoinMessage.replace("{player}", playerName));
         } else {
-            Bukkit.broadcastMessage(ChatColor.GOLD + "  ★ " + ChatColor.GREEN + playerName + ChatColor.GRAY + " sunucuya katıldı!");
+            Bukkit.broadcastMessage("  " + joinMessage.replace("{player}", playerName));
         }
         Bukkit.broadcastMessage("");
         
@@ -80,12 +131,12 @@ public class TimeHUD extends JavaPlugin implements Listener {
             public void run() {
                 if (tick == 0) {
                     player.sendTitle(
-                        ChatColor.GOLD + "★ " + ChatColor.WHITE + "Hoş Geldin" + ChatColor.GOLD + " ★",
+                        welcomeTitle,
                         ChatColor.AQUA + playerName,
                         10, 40, 10
                     );
                 } else if (tick == 3) {
-                    player.sendTitle("", ChatColor.GRAY + "İyi oyunlar!", 0, 30, 20);
+                    player.sendTitle("", welcomeSubtitle, 0, 30, 20);
                 } else if (tick >= 5) {
                     cancel();
                 }
@@ -98,13 +149,13 @@ public class TimeHUD extends JavaPlugin implements Listener {
             @Override
             public void run() {
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, 
-                    new TextComponent(ChatColor.YELLOW + "⚡ " + ChatColor.WHITE + "SWXOQX Sunucusuna Hoş Geldin! " + ChatColor.YELLOW + "⚡"));
+                    new TextComponent(welcomeActionbar));
             }
         }.runTaskLater(this, 80L);
     }
     
     public boolean isHUDEnabled(Player player) {
-        return hudEnabled.getOrDefault(player.getUniqueId(), true);
+        return hudEnabled.getOrDefault(player.getUniqueId(), enabledByDefault);
     }
     
     public void setHUDEnabled(Player player, boolean enabled) {
@@ -119,7 +170,7 @@ public class TimeHUD extends JavaPlugin implements Listener {
         Objective objective = scoreboard.registerNewObjective(
             "timehud", 
             Criteria.DUMMY,
-            ChatColor.GOLD + "" + ChatColor.BOLD + "⚡ SWXOQX ⚡"
+            hudTitle
         );
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.numberFormat(io.papermc.paper.scoreboard.numbers.NumberFormat.blank());
@@ -169,7 +220,7 @@ public class TimeHUD extends JavaPlugin implements Listener {
         int maxPlayers = Bukkit.getMaxPlayers();
         
         String playerName = player.getName();
-        boolean isDev = DEVELOPERS.contains(playerName.toLowerCase());
+        boolean isDev = developers.contains(playerName.toLowerCase());
         String roleLabel = isDev ? ChatColor.RED + "Geliştirici" : ChatColor.WHITE + "Oyuncu";
         String nameColor = isDev ? ChatColor.AQUA.toString() : ChatColor.GREEN.toString();
         

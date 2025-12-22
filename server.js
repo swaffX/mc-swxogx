@@ -1,5 +1,10 @@
+// Environment variables
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -65,14 +70,52 @@ class RconClient {
   }
 }
 
-const rcon = new RconClient('127.0.0.1', 25575, 'SwxOgx2024Rcon!');
+const rcon = new RconClient(
+  process.env.RCON_HOST || '127.0.0.1', 
+  parseInt(process.env.RCON_PORT) || 25575, 
+  process.env.RCON_PASSWORD || 'SwxOgx2024Rcon!'
+);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.gstatic.com", "https://apis.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:", "http:"],
+      connectSrc: ["'self'", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com", "https://www.googleapis.com"],
+      frameSrc: ["'self'", "https://accounts.google.com"]
+    }
+  }
+}));
+
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 dakika
+  max: 100, // IP başına 100 istek
+  message: { error: 'Çok fazla istek gönderdiniz, lütfen bekleyin.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // Auth için daha sıkı limit
+  message: { error: 'Çok fazla giriş denemesi, lütfen bekleyin.' }
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Rate limiting uygula
+app.use('/api/', apiLimiter);
+app.use('/api/auth/', authLimiter);
 
 // ============================================
 // AUTH ENDPOINTS
@@ -263,73 +306,11 @@ app.post('/api/stop', verifyToken, requireRole('admin'), (req, res) => {
   });
 });
 
-// Sunucu restart (lock temizleme ile) - Moderator+ yetkisi gerekli
+// Sunucu restart - /api/server/restart'a yönlendir (legacy endpoint)
 app.post('/api/restart', verifyToken, requireRole('admin', 'moderator'), (req, res) => {
-  console.log('🔄 Restart request received (legacy endpoint)...');
-  
-  // Önce durdur
-  exec('pm2 stop minecraft', (err1) => {
-    if (err1) {
-      console.error('Stop error:', err1);
-    }
-    
-    console.log('⏸️ Minecraft stopped, cleaning locks...');
-    
-    // Lock dosyalarını temizle
-    const lockFiles = [
-      path.join(__dirname, 'world', 'session.lock'),
-      path.join(__dirname, 'world_nether', 'session.lock'),
-      path.join(__dirname, 'world_the_end', 'session.lock')
-    ];
-    
-    lockFiles.forEach(f => {
-      try {
-        if (fs.existsSync(f)) {
-          fs.unlinkSync(f);
-          console.log(`🧹 Cleaned: ${f}`);
-        }
-      } catch(e) {
-        console.warn(`⚠️ Could not clean ${f}:`, e.message);
-      }
-    });
-    
-    // 3 saniye bekle
-    console.log('⏳ Waiting 3 seconds for Java process to exit...');
-    setTimeout(() => {
-      // Java process'lerini kontrol et
-      exec('pgrep -f "java.*server.jar"', (pgrepErr, stdout) => {
-        if (stdout && stdout.trim()) {
-          console.log('⚠️ Java process still running, killing...');
-          exec('pkill -9 -f "java.*server.jar"', (killErr) => {
-            if (killErr) {
-              console.warn('Kill error:', killErr);
-            }
-            setTimeout(startMinecraft, 1000);
-          });
-        } else {
-          startMinecraft();
-        }
-      });
-      
-      function startMinecraft() {
-        console.log('▶️ Starting Minecraft...');
-        exec('pm2 start minecraft', (err2, out, stderr) => {
-          if (err2) {
-            console.error('Start error:', err2);
-            return res.status(500).json({ 
-              success: false, 
-              error: err2.message 
-            });
-          }
-          console.log('✅ Minecraft restarted successfully');
-          res.json({ 
-            success: true, 
-            message: 'Sunucu yeniden başlatılıyor... (30-60 saniye sürebilir)' 
-          });
-        });
-      }
-    }, 3000);
-  });
+  // Legacy endpoint - yeni endpoint'e yönlendir
+  req.url = '/api/server/restart';
+  app.handle(req, res);
 });
 
 // Sunucu logları
@@ -689,6 +670,202 @@ setInterval(recordStats, 5000);
 
 app.get('/api/stats/history', (req, res) => {
   res.json(statsHistory);
+});
+
+// ============================================
+// BACKUP ENDPOINTS
+// ============================================
+
+// Backup listesi
+app.get('/api/backups', verifyToken, requireRole('admin'), (req, res) => {
+  const backupDir = process.env.BACKUP_DIR || path.join(os.homedir(), 'minecraft-backups');
+  
+  try {
+    if (!fs.existsSync(backupDir)) {
+      return res.json({ success: true, backups: [] });
+    }
+    
+    const files = fs.readdirSync(backupDir)
+      .filter(f => f.startsWith('minecraft-backup-') && f.endsWith('.tar.gz'))
+      .map(f => {
+        const stats = fs.statSync(path.join(backupDir, f));
+        return {
+          name: f,
+          size: stats.size,
+          sizeFormatted: (stats.size / 1024 / 1024).toFixed(2) + ' MB',
+          created: stats.mtime,
+          createdFormatted: stats.mtime.toLocaleString('tr-TR')
+        };
+      })
+      .sort((a, b) => new Date(b.created) - new Date(a.created));
+    
+    res.json({ success: true, backups: files, backupDir });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Manuel backup oluştur
+app.post('/api/backups/create', verifyToken, requireRole('admin'), (req, res) => {
+  const scriptPath = path.join(__dirname, 'scripts', 'backup.sh');
+  
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(404).json({ success: false, error: 'Backup script bulunamadı' });
+  }
+  
+  console.log('📦 Manual backup started...');
+  
+  exec(`bash "${scriptPath}"`, { cwd: __dirname }, (error, stdout, stderr) => {
+    if (error) {
+      console.error('Backup error:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    
+    console.log('✅ Backup completed');
+    res.json({ 
+      success: true, 
+      message: 'Backup oluşturuldu',
+      output: stdout
+    });
+  });
+});
+
+// Backup sil
+app.delete('/api/backups/:filename', verifyToken, requireRole('admin'), (req, res) => {
+  const backupDir = process.env.BACKUP_DIR || path.join(os.homedir(), 'minecraft-backups');
+  const filename = req.params.filename;
+  
+  // Güvenlik kontrolü
+  if (!filename.startsWith('minecraft-backup-') || !filename.endsWith('.tar.gz')) {
+    return res.status(400).json({ success: false, error: 'Geçersiz dosya adı' });
+  }
+  
+  const filePath = path.join(backupDir, filename);
+  
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      res.json({ success: true, message: 'Backup silindi' });
+    } else {
+      res.status(404).json({ success: false, error: 'Dosya bulunamadı' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// MONITORING ENDPOINTS
+// ============================================
+
+// Detaylı sistem bilgisi
+app.get('/api/monitoring/system', verifyToken, (req, res) => {
+  const cpus = os.cpus();
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const usedMem = totalMem - freeMem;
+  
+  // CPU kullanımı hesapla
+  let cpuUsage = 0;
+  cpus.forEach(cpu => {
+    const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+    const idle = cpu.times.idle;
+    cpuUsage += ((total - idle) / total) * 100;
+  });
+  cpuUsage = cpuUsage / cpus.length;
+  
+  res.json({
+    cpu: {
+      cores: cpus.length,
+      model: cpus[0].model,
+      speed: cpus[0].speed,
+      usage: Math.round(cpuUsage * 10) / 10
+    },
+    memory: {
+      total: totalMem,
+      used: usedMem,
+      free: freeMem,
+      usagePercent: Math.round((usedMem / totalMem) * 100)
+    },
+    os: {
+      platform: os.platform(),
+      type: os.type(),
+      release: os.release(),
+      hostname: os.hostname(),
+      uptime: os.uptime()
+    },
+    timestamp: Date.now()
+  });
+});
+
+// TPS geçmişi
+let tpsHistory = [];
+const MAX_TPS_HISTORY = 120; // 1 saat (30 saniyede bir)
+
+async function recordTps() {
+  try {
+    const response = await rcon.send('tps');
+    const match = response.match(/(\d+\.?\d*),\s*(\d+\.?\d*),\s*(\d+\.?\d*)/);
+    if (match) {
+      tpsHistory.push({
+        time: Date.now(),
+        tps1m: parseFloat(match[1]),
+        tps5m: parseFloat(match[2]),
+        tps15m: parseFloat(match[3])
+      });
+      if (tpsHistory.length > MAX_TPS_HISTORY) tpsHistory.shift();
+    }
+  } catch (e) {
+    // RCON bağlantısı yok
+  }
+}
+setInterval(recordTps, 30000);
+
+app.get('/api/monitoring/tps-history', verifyToken, (req, res) => {
+  res.json(tpsHistory);
+});
+
+// Oyuncu istatistikleri
+app.get('/api/monitoring/player-stats', verifyToken, async (req, res) => {
+  try {
+    const statsDir = path.join(__dirname, 'world', 'stats');
+    
+    if (!fs.existsSync(statsDir)) {
+      return res.json({ success: true, stats: [] });
+    }
+    
+    const files = fs.readdirSync(statsDir).filter(f => f.endsWith('.json'));
+    const stats = [];
+    
+    for (const file of files.slice(0, 20)) { // Max 20 oyuncu
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(statsDir, file), 'utf8'));
+        const uuid = file.replace('.json', '');
+        
+        stats.push({
+          uuid,
+          playTime: data.stats?.['minecraft:custom']?.['minecraft:play_time'] || 0,
+          deaths: data.stats?.['minecraft:custom']?.['minecraft:deaths'] || 0,
+          mobKills: data.stats?.['minecraft:custom']?.['minecraft:mob_kills'] || 0,
+          jumps: data.stats?.['minecraft:custom']?.['minecraft:jump'] || 0
+        });
+      } catch (e) {}
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: Date.now(),
+    uptime: process.uptime(),
+    version: require('./package.json').version
+  });
 });
 
 // Port kullanımda mı kontrol et

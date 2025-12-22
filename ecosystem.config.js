@@ -52,6 +52,7 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '500M',
+      env_file: '.env',
       env: {
         NODE_ENV: 'production',
         PORT: 3000
@@ -64,9 +65,9 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '200M',
+      env_file: '/opt/minecraft/.env',
       env: {
-        NODE_ENV: 'production',
-        DISCORD_TOKEN: 'TOKEN_BURAYA_VPS_TE_AYARLANACAK'
+        NODE_ENV: 'production'
       }
     }
   ]

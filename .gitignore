@@ -61,6 +61,11 @@ github-actions-key*
 firebase-service-account.json
 swxogx-minecraft-firebase-adminsdk-*.json
 
+# Environment Variables
+.env
+.env.local
+.env.production
+
 # User Data
 data/user-roles.json
 data/player-roles.json

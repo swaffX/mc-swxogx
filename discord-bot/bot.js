@@ -5,6 +5,18 @@ const path = require('path');
 const net = require('net');
 const config = require('./config.json');
 
+// Environment variables desteği
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+// Global error handling
+process.on('unhandledRejection', (error) => {
+    console.error('❌ Unhandled promise rejection:', error);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught exception:', error);
+});
+
 // Config dosyasını kaydet
 function saveConfig() {
     const configPath = path.join(__dirname, 'config.json');
@@ -62,7 +74,11 @@ class RconClient {
     }
 }
 
-const rcon = new RconClient(config.minecraft.host, config.minecraft.rconPort || 25575, config.minecraft.rconPassword || 'SwxOgx2024Rcon!');
+const rcon = new RconClient(
+    config.minecraft.host, 
+    config.minecraft.rconPort || 25575, 
+    process.env.RCON_PASSWORD || config.minecraft.rconPassword || 'SwxOgx2024Rcon!'
+);
 
 // Token environment variable'dan al
 const TOKEN = process.env.DISCORD_TOKEN || '';
@@ -140,7 +156,28 @@ const commands = [
                 .setRequired(false)),
     new SlashCommandBuilder()
         .setName('yardim')
-        .setDescription('Bot komutlarını gösterir')
+        .setDescription('Bot komutlarını gösterir'),
+    new SlashCommandBuilder()
+        .setName('backup')
+        .setDescription('Sunucu backup işlemleri')
+        .addStringOption(option =>
+            option.setName('islem')
+                .setDescription('İşlem türü')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Oluştur', value: 'create' },
+                    { name: 'Liste', value: 'list' }
+                )),
+    new SlashCommandBuilder()
+        .setName('restart')
+        .setDescription('Minecraft sunucusunu yeniden başlatır (Sadece yöneticiler)'),
+    new SlashCommandBuilder()
+        .setName('stats')
+        .setDescription('Oyuncu istatistiklerini gösterir')
+        .addStringOption(option =>
+            option.setName('oyuncu')
+                .setDescription('Oyuncu adı')
+                .setRequired(false))
 ].map(cmd => cmd.toJSON());
 
 // Bot hazır olduğunda
@@ -755,6 +792,168 @@ client.on('interactionCreate', async interaction => {
             
             // Hemen güncelle
             setTimeout(updateLiveInfoPanel, 2000);
+        }
+    }
+    
+    // Backup komutu
+    else if (commandName === 'backup') {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return interaction.reply({ content: '❌ Bu komutu kullanmak için yönetici yetkisine sahip olmalısın!', ephemeral: true });
+        }
+        
+        const islem = interaction.options.getString('islem');
+        await interaction.deferReply();
+        
+        if (islem === 'create') {
+            const { exec } = require('child_process');
+            const scriptPath = path.join(__dirname, '..', 'scripts', 'backup.sh');
+            
+            exec(`bash "${scriptPath}"`, { cwd: path.join(__dirname, '..') }, (error, stdout, stderr) => {
+                if (error) {
+                    const embed = new EmbedBuilder()
+                        .setColor(0xFF0000)
+                        .setTitle('❌ Backup Hatası')
+                        .setDescription(`\`\`\`${error.message}\`\`\``)
+                        .setTimestamp();
+                    return interaction.editReply({ embeds: [embed] });
+                }
+                
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('✅ Backup Oluşturuldu')
+                    .setDescription('Sunucu backup\'ı başarıyla oluşturuldu.')
+                    .addFields({ name: '📋 Çıktı', value: `\`\`\`${stdout.slice(0, 1000)}\`\`\`` })
+                    .setTimestamp();
+                
+                interaction.editReply({ embeds: [embed] });
+            });
+        } else if (islem === 'list') {
+            const os = require('os');
+            const backupDir = process.env.BACKUP_DIR || path.join(os.homedir(), 'minecraft-backups');
+            
+            try {
+                if (!fs.existsSync(backupDir)) {
+                    return interaction.editReply('📁 Henüz backup yok.');
+                }
+                
+                const files = fs.readdirSync(backupDir)
+                    .filter(f => f.startsWith('minecraft-backup-') && f.endsWith('.tar.gz'))
+                    .map(f => {
+                        const stats = fs.statSync(path.join(backupDir, f));
+                        return {
+                            name: f,
+                            size: (stats.size / 1024 / 1024).toFixed(2),
+                            date: stats.mtime
+                        };
+                    })
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 10);
+                
+                const list = files.map((f, i) => 
+                    `${i + 1}. \`${f.name}\` - ${f.size} MB`
+                ).join('\n') || 'Backup bulunamadı';
+                
+                const embed = new EmbedBuilder()
+                    .setColor(0x3498DB)
+                    .setTitle('📦 Backup Listesi')
+                    .setDescription(list)
+                    .setFooter({ text: `Toplam: ${files.length} backup` })
+                    .setTimestamp();
+                
+                interaction.editReply({ embeds: [embed] });
+            } catch (error) {
+                interaction.editReply('❌ Backup listesi alınamadı: ' + error.message);
+            }
+        }
+    }
+    
+    // Restart komutu
+    else if (commandName === 'restart') {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return interaction.reply({ content: '❌ Bu komutu kullanmak için yönetici yetkisine sahip olmalısın!', ephemeral: true });
+        }
+        
+        await interaction.deferReply();
+        
+        const { exec } = require('child_process');
+        
+        const embed = new EmbedBuilder()
+            .setColor(0xFFFF00)
+            .setTitle('🔄 Sunucu Yeniden Başlatılıyor')
+            .setDescription('Minecraft sunucusu yeniden başlatılıyor...\nBu işlem 30-60 saniye sürebilir.')
+            .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        
+        // PM2 ile restart
+        exec('pm2 restart minecraft', (error, stdout, stderr) => {
+            const resultEmbed = new EmbedBuilder()
+                .setColor(error ? 0xFF0000 : 0x00FF00)
+                .setTitle(error ? '❌ Restart Hatası' : '✅ Sunucu Yeniden Başlatıldı')
+                .setDescription(error ? error.message : 'Sunucu başarıyla yeniden başlatıldı.')
+                .setTimestamp();
+            
+            interaction.followUp({ embeds: [resultEmbed] });
+        });
+    }
+    
+    // Stats komutu
+    else if (commandName === 'stats') {
+        await interaction.deferReply();
+        
+        const oyuncu = interaction.options.getString('oyuncu');
+        
+        try {
+            // Sunucu istatistikleri
+            if (!oyuncu) {
+                const state = await GameDig.query({
+                    type: 'minecraft',
+                    host: config.minecraft.host,
+                    port: config.minecraft.port
+                });
+                
+                let tpsInfo = 'N/A';
+                try {
+                    const tpsResponse = await rcon.send('tps');
+                    const match = tpsResponse.match(/(\d+\.?\d*),\s*(\d+\.?\d*),\s*(\d+\.?\d*)/);
+                    if (match) {
+                        tpsInfo = `1m: ${match[1]} | 5m: ${match[2]} | 15m: ${match[3]}`;
+                    }
+                } catch (e) {}
+                
+                const embed = new EmbedBuilder()
+                    .setColor(0x9B59B6)
+                    .setTitle('📊 Sunucu İstatistikleri')
+                    .addFields(
+                        { name: '👥 Online', value: `${state.players.length}/${state.maxplayers}`, inline: true },
+                        { name: '⚡ TPS', value: tpsInfo, inline: true },
+                        { name: '🏷️ Sürüm', value: state.version || 'Bilinmiyor', inline: true }
+                    )
+                    .setTimestamp();
+                
+                await interaction.editReply({ embeds: [embed] });
+            } else {
+                // Oyuncu istatistikleri (RCON ile)
+                try {
+                    // Oyuncunun online olup olmadığını kontrol et
+                    const listResponse = await rcon.send('list');
+                    const isOnline = listResponse.toLowerCase().includes(oyuncu.toLowerCase());
+                    
+                    const embed = new EmbedBuilder()
+                        .setColor(isOnline ? 0x00FF00 : 0x808080)
+                        .setTitle(`📊 ${oyuncu} İstatistikleri`)
+                        .addFields(
+                            { name: '📶 Durum', value: isOnline ? '🟢 Online' : '⚫ Offline', inline: true }
+                        )
+                        .setTimestamp();
+                    
+                    await interaction.editReply({ embeds: [embed] });
+                } catch (e) {
+                    await interaction.editReply('❌ Oyuncu bilgisi alınamadı: ' + e.message);
+                }
+            }
+        } catch (error) {
+            await interaction.editReply('❌ Sunucuya bağlanılamadı.');
         }
     }
 });
