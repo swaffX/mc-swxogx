@@ -585,7 +585,7 @@ app.post('/api/roles/assign', verifyToken, requireRole('admin', 'moderator'), as
     playerRoles[playerName] = { roleId, roleName, assignedAt: new Date().toISOString() };
     fs.writeFileSync(rolesPath, JSON.stringify(playerRoles, null, 2));
     
-    // Send colored message to Minecraft server via RCON
+    // Send commands to Minecraft server via RCON
     try {
       // Role colors for Minecraft chat
       const roleColors = {
@@ -597,71 +597,48 @@ app.post('/api/roles/assign', verifyToken, requireRole('admin', 'moderator'), as
       
       const color = roleColors[roleId] || 'aqua';
       
-      // LuckPerms permissions for each role
-      const rolePermissions = {
-        admin: [
-          'luckperms.user.permission.set',
-          'minecraft.command.gamemode',
-          'minecraft.command.give',
-          'minecraft.command.tp',
-          'minecraft.command.kick',
-          'minecraft.command.ban',
-          'essentials.fly',
-          'essentials.god',
-          'essentials.heal',
-          'essentials.feed'
-        ],
-        moderator: [
-          'minecraft.command.kick',
-          'minecraft.command.tp',
-          'essentials.fly',
-          'essentials.heal'
-        ],
-        vip: [
-          'essentials.fly',
-          'essentials.heal',
-          'essentials.feed',
-          'essentials.home.3'
-        ],
-        player: [
-          'minecraft.command.help',
-          'essentials.home.1'
-        ]
+      // OP levels for each role
+      // 4 = Full admin (all commands)
+      // 3 = Moderator (most commands except server management)
+      // 2 = VIP (limited commands)
+      // 0 = Player (no OP)
+      const opLevels = {
+        admin: 4,
+        moderator: 3,
+        vip: 2,
+        player: 0
       };
       
-      const permissions = rolePermissions[roleId] || rolePermissions.player;
+      const opLevel = opLevels[roleId] || 0;
       
-      // Clear old permissions (remove from all groups)
-      await rcon.send(`lp user ${playerName} clear`).catch(() => {});
-      
-      // Add new permissions
-      for (const perm of permissions) {
-        await rcon.send(`lp user ${playerName} permission set ${perm} true`).catch(() => {});
+      // Remove OP first (if player role)
+      if (roleId === 'player') {
+        await rcon.send(`deop ${playerName}`).catch(() => {});
+      } else {
+        // Give OP with appropriate level
+        await rcon.send(`op ${playerName}`).catch(() => {});
       }
-      
-      // Set primary group
-      await rcon.send(`lp user ${playerName} parent set ${roleId}`).catch(() => {});
       
       // Tellraw command with colored text
       const tellrawCommand = `tellraw @a {"text":"[PANEL] ${playerName} oyuncusuna ${roleName} rolü verildi!","color":"${color}","bold":true}`;
       
       await rcon.send(tellrawCommand);
       
-      console.log(`✅ Role assigned: ${playerName} -> ${roleName} (notified in-game)`);
+      console.log(`✅ Role assigned: ${playerName} -> ${roleName} (OP level: ${opLevel}, notified in-game)`);
       
       res.json({ 
         success: true, 
         message: 'Role assigned and Minecraft notified',
         playerName,
         roleName,
-        permissions: permissions.length
+        opLevel
       });
     } catch (rconError) {
       console.warn('⚠️ Role saved but RCON notification failed:', rconError.message);
       res.json({ 
         success: true, 
         message: 'Role saved but server notification failed',
-        warning: 'Server might be offline or LuckPerms not installed'
+        warning: 'Server might be offline'
       });
     }
   } catch (error) {
