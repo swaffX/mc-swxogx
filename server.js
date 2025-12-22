@@ -696,7 +696,7 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Minecraft Server Manager API running on port ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
 });
-
+ 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`❌ Port ${PORT} kullanımda! 5 saniye sonra tekrar denenecek...`);
