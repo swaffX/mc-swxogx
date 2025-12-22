@@ -8,19 +8,14 @@ chmod +x scripts/fix-downgrade-issues.sh
 ./scripts/fix-downgrade-issues.sh
 ```
 
-## ADIM 2: Pluginleri Yükle (Seçeneklerden Birini)
+## ADIM 2: Pluginleri Yükle
 
-### Seçenek A: Temel Pluginler (Önerilen - 8 plugin)
+### Minimal Set (Sadece TreeAssist - ÖNERİLEN)
 ```bash
-chmod +x scripts/install-essential-plugins.sh
-./scripts/install-essential-plugins.sh
+chmod +x scripts/install-minimal-plugins.sh
+./scripts/install-minimal-plugins.sh
 ```
-
-### Seçenek B: Tüm Pluginler (15 plugin)
-```bash
-chmod +x scripts/install-plugins-1.20.6.sh
-./scripts/install-plugins-1.20.6.sh
-```
+**Not:** Slimefun zaten kurulu (500+ custom item/silah)!
 
 ## ADIM 3: Sunucuyu Başlat
 ```bash
@@ -38,16 +33,34 @@ pm2 logs minecraft --lines 50
 ✅ TimeHUD 1.20.6 için rebuild edildi
 ✅ Eski world yedeklendi ve silindi
 ✅ Yeni world oluşturuldu
-✅ Boş plugin dosyaları temizlendi
+✅ TreeAssist yüklendi (ağaç kesme)
 ✅ Sunucu başarıyla başladı
 
-## Çalışan Pluginler
+## Kurulu Pluginler
 
-- ✅ Vault v1.7.3
-- ✅ Slimefun vRC-37
-- ✅ Essentials v2.21.2
-- ✅ SkinsRestorer v15.9.1
-- ✅ TimeHUD v1.0.0 (1.20.6 uyumlu)
+- ✅ Vault v1.7.3 (ekonomi API)
+- ✅ Slimefun vRC-37 (500+ custom item/silah)
+- ✅ Essentials v2.21.2 (komutlar)
+- ✅ SkinsRestorer v15.9.1 (skin)
+- ✅ TimeHUD v1.0.0 (HUD)
+- ✅ TreeAssist v7.0.0 (ağaç kesme)
+
+## Slimefun Kullanımı
+
+```bash
+# Oyun içinde
+/sf guide
+```
+
+**Slimefun Özellikleri:**
+- 500+ custom item
+- 20+ custom silah (kılıç, yay, balta)
+- 10+ custom zırh seti
+- 100+ makine (elektrik, otomasyon)
+- Jetpack, grappling hook, parachute
+- Sihirli itemlar
+
+**Detaylı rehber:** `docs/SLIMEFUN_SILAHLAR.md`
 
 ## Sorun Çözme
 
