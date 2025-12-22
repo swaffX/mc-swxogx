@@ -31,6 +31,14 @@ TimeHUD/target/
 TimeHUD/.idea/
 TimeHUD/*.iml
 
+# Downloaded Plugins (too large, use install script)
+plugins/*.jar
+!plugins/.gitkeep
+
+# Plugin Configs (keep these)
+!plugins/*/config.yml
+!plugins/*/settings.yml
+
 # Maven
 **/target/
 pom.xml.tag

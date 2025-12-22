@@ -1,0 +1,3 @@
+# This folder contains Minecraft plugins
+# Plugins are downloaded via scripts/install-plugins.sh
+# Do not commit .jar files (too large)
