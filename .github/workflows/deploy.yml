@@ -94,7 +94,11 @@ jobs:
             
             # Restart services
             echo "🔄 Restarting services..."
-            pm2 restart minecraft-api || pm2 start server.js --name minecraft-api
+            if pm2 list | grep -q "minecraft-api"; then
+              pm2 restart minecraft-api
+            else
+              pm2 start server.js --name minecraft-api
+            fi
             pm2 save
             
             # Cleanup
