@@ -1,23 +1,33 @@
 # 🚀 VPS'de Çalıştırılacak Komutlar
 
-## 1. Sunucuyu Durdur
+## ADIM 1: Sunucuyu Durdur ve Düzelt
 ```bash
 pm2 stop minecraft
-```
-
-## 2. Fix Scriptini Çalıştır
-```bash
 cd /opt/minecraft
 chmod +x scripts/fix-downgrade-issues.sh
 ./scripts/fix-downgrade-issues.sh
 ```
 
-## 3. Sunucuyu Başlat
+## ADIM 2: Pluginleri Yükle (Seçeneklerden Birini)
+
+### Seçenek A: Temel Pluginler (Önerilen - 8 plugin)
+```bash
+chmod +x scripts/install-essential-plugins.sh
+./scripts/install-essential-plugins.sh
+```
+
+### Seçenek B: Tüm Pluginler (15 plugin)
+```bash
+chmod +x scripts/install-plugins-1.20.6.sh
+./scripts/install-plugins-1.20.6.sh
+```
+
+## ADIM 3: Sunucuyu Başlat
 ```bash
 pm2 start minecraft
 ```
 
-## 4. Logları İzle
+## ADIM 4: Logları İzle
 ```bash
 pm2 logs minecraft --lines 50
 ```
