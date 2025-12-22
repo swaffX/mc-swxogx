@@ -51,24 +51,24 @@ anticheat:
     update-radius: 2
     use-permission: false
 chunks:
-  auto-save-interval: 12000
-  delay-chunk-unloads-by: 5s
+  auto-save-interval: 18000
+  delay-chunk-unloads-by: 10s
   entity-per-chunk-save-limit:
-    arrow: -1
-    ender_pearl: -1
-    experience_orb: -1
-    fireball: -1
-    small_fireball: -1
-    snowball: -1
+    arrow: 8
+    ender_pearl: 8
+    experience_orb: 16
+    fireball: 8
+    small_fireball: 8
+    snowball: 8
   fixed-chunk-inhabited-time: -1
   flush-regions-on-save: false
-  max-auto-save-chunks-per-tick: 8
+  max-auto-save-chunks-per-tick: 6
   prevent-moving-into-unloaded-chunks: true
 collisions:
   allow-player-cramming-damage: false
   allow-vehicle-collisions: true
   fix-climbing-bypassing-cramming-rule: false
-  max-entity-collisions: 2
+  max-entity-collisions: 4
   only-players-collide: false
 command-blocks:
   force-follow-perm-level: true
@@ -76,7 +76,7 @@ command-blocks:
 entities:
   armor-stands:
     do-collision-entity-lookups: false
-    tick: false
+    tick: true
   behavior:
     allow-spider-world-border-climbing: true
     baby-zombie-movement-modifier: 0.5
@@ -139,18 +139,18 @@ entities:
     alt-item-despawn-rate:
       enabled: true
       items:
-        cobblestone: 300
-        netherrack: 300
-        sand: 300
-        gravel: 300
-        dirt: 300
-        grass: 300
-        pumpkin: 300
-        melon: 300
-        kelp: 300
-        bamboo: 300
+        cobblestone: 200
+        netherrack: 200
+        sand: 200
+        gravel: 200
+        dirt: 200
+        grass: 200
+        pumpkin: 200
+        melon: 200
+        kelp: 200
+        bamboo: 200
     count-all-mobs-for-spawning: false
-    creative-arrow-despawn-rate: default
+    creative-arrow-despawn-rate: 60
     despawn-range-shape: ELLIPSOID
     despawn-ranges:
       ambient:
@@ -191,8 +191,8 @@ entities:
     - sleeping_pos
     iron-golems-can-spawn-in-air: false
     monster-spawn-max-light-level: default
-    non-player-arrow-despawn-rate: default
-    per-player-mob-spawns: false
+    non-player-arrow-despawn-rate: 60
+    per-player-mob-spawns: true
     scan-for-legacy-ender-dragon: true
     skeleton-horse-thunder-spawn-chance: default
     slime-spawn-height:
@@ -275,7 +275,7 @@ fixes:
   tnt-entity-height-nerf: disabled
 hopper:
   cooldown-when-full: true
-  disable-move-event: true
+  disable-move-event: false
   ignore-occluding-blocks: true
 lootables:
   auto-replenish: false
@@ -315,14 +315,14 @@ tick-rates:
   behavior:
     villager:
       validatenearbypoi: 60
-  container-update: 3
-  dry-farmland: 4
-  grass-spread: 4
-  mob-spawner: 2
+  container-update: 1
+  dry-farmland: 1
+  grass-spread: 1
+  mob-spawner: 1
   sensor:
     villager:
-      secondarypoisensor: 80
-  wet-farmland: 4
+      secondarypoisensor: 40
+  wet-farmland: 1
 unsupported-settings:
   disable-world-ticking-when-empty: false
   fix-invulnerable-end-crystal-exploit: true
