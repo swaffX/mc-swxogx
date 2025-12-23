@@ -1,20 +1,12 @@
-# 📦 Plugin Listesi - Minecraft 1.20.6
+# 📦 Plugin Listesi - Minecraft 1.21.1
 
 ## 🚀 Hızlı Kurulum
 
-### Temel Pluginler (Önerilen - 8 plugin)
+### Tüm Pluginler (10 plugin)
 ```bash
 cd /opt/minecraft
-chmod +x scripts/install-essential-plugins.sh
-./scripts/install-essential-plugins.sh
-pm2 restart minecraft
-```
-
-### Tüm Pluginler (15 plugin)
-```bash
-cd /opt/minecraft
-chmod +x scripts/install-plugins-1.20.6.sh
-./scripts/install-plugins-1.20.6.sh
+chmod +x scripts/install-plugins-1.21.1.sh
+./scripts/install-plugins-1.21.1.sh
 pm2 restart minecraft
 ```
 
@@ -46,220 +38,229 @@ pm2 restart minecraft
 - Custom skin'ler
 - Otomatik çalışır
 
-### 5. TimeHUD v1.0.0 ✅
+### 5. TimeHUD v1.1.0 ✅
 - Oyuncu HUD'unda sunucu saati
-- Custom plugin
+- Custom plugin (1.21.1 uyumlu)
 - **Komut:** `/timehud`
 
 ---
 
-## 📥 Yüklenebilir Pluginler (1.20.6 Uyumlu)
+## 📥 Yüklenebilir Pluginler (1.21.1 Uyumlu)
 
 ### 🏗️ Dünya Düzenleme
 
-#### WorldEdit ⭐ ZORUNLU
+#### 1. WorldEdit v7.3.6 ⭐ ZORUNLU
 - Hızlı yapı oluşturma
 - Kopyala/yapıştır
 - Terrain düzenleme
+- Brush araçları
 - **Komutlar:**
   - `//wand` - Seçim değneği
   - `//set <block>` - Blok doldur
   - `//copy` - Kopyala
   - `//paste` - Yapıştır
+  - `//undo` - Geri al
+  - `//sphere <block> <radius>` - Küre oluştur
+- **Boyut:** ~3 MB
+- **Performans:** Orta
 
-#### WorldGuard ⭐ ZORUNLU
-- Bölge koruma
+#### 2. WorldGuard v7.0.11 ⭐ ZORUNLU
+- Bölge koruma sistemi
 - PvP kontrolü
+- Mob spawn kontrolü
 - Flag sistemi
 - **Komutlar:**
   - `/rg define <isim>` - Bölge oluştur
   - `/rg flag <bölge> pvp deny` - PvP kapat
+  - `/rg addmember <bölge> <oyuncu>` - Üye ekle
+  - `/rg info <bölge>` - Bölge bilgisi
+- **Boyut:** ~1 MB
+- **Performans:** Düşük
 
 ---
 
 ### 🛡️ Koruma ve Güvenlik
 
-#### LuckPerms ⭐ ÖNERİLEN
+#### 3. LuckPerms v5.4.141 ⭐ ÖNERİLEN
 - Modern izin sistemi
 - Grup yönetimi
 - Web editör
+- MySQL/SQLite desteği
 - **Komutlar:**
-  - `/lp user <player> permission set <perm>`
-  - `/lp creategroup <name>`
+  - `/lp user <player> permission set <perm>` - İzin ver
+  - `/lp creategroup <name>` - Grup oluştur
+  - `/lp user <player> parent set <group>` - Gruba ekle
+  - `/lp editor` - Web editör
 - **Web:** https://luckperms.net/editor
+- **Boyut:** ~2 MB
+- **Performans:** Düşük
 
-#### CoreProtect ⭐ ÖNERİLEN
+#### 4. CoreProtect v22.4 ⭐ ÖNERİLEN
 - Blok log sistemi
 - Rollback/restore
 - Grief koruması
+- Chest log
 - **Komutlar:**
-  - `/co inspect` - İnceleme modu
+  - `/co inspect` - İnceleme modu (sağ tıkla)
   - `/co rollback u:<user> t:<time>` - Geri al
+  - `/co restore u:<user> t:<time>` - Geri yükle
   - `/co lookup` - Arama
-
-#### GriefPrevention ⭐ ÖNERİLEN
-- Otomatik arazi koruma
-- Claim sistemi
-- PvP koruması
-- **Kullanım:**
-  - Altın kürek ile claim yap
-  - `/trust <player>` - Oyuncu ekle
-  - `/abandonclaim` - Claim sil
+- **Örnek:** `/co rollback u:Notch t:1h r:10`
+- **Boyut:** ~1 MB
+- **Performans:** Orta
 
 ---
 
 ### 🎮 Oynanış
 
-#### Citizens ⭐ POPÜLER
+#### 5. Citizens v2.0.35 ⭐ POPÜLER
 - NPC sistemi
 - Custom skin'ler
 - Quest entegrasyonu
+- Mağaza NPC'leri
 - **Komutlar:**
   - `/npc create <isim>` - NPC oluştur
   - `/npc skin <isim>` - Skin değiştir
   - `/npc text <metin>` - Konuşma ekle
+  - `/npc remove` - NPC sil
+  - `/npc select` - NPC seç
+- **Boyut:** ~2 MB
+- **Performans:** Orta
 
-#### TreeAssist ⭐ KULLANICI İSTEĞİ
-- Ağacı kökünden kesince tüm ağaç düşer
-- Animasyonlu düşme
-- **Komutlar:**
-  - `/ta` - Ana menü
-  - `/ta toggle` - Aç/kapat
-
-#### ChestShop ⭐ POPÜLER
+#### 6. ChestShop v3.12.2 ⭐ POPÜLER
 - Oyuncu mağazaları
 - Ekonomi entegrasyonu
+- Otomatik alım/satım
 - **Kullanım:**
   - Chest + Sign ile mağaza yap
-  - Format: `[Quantity]`, `[Price]`, `Item`, `Player`
-
----
-
-### 💼 Ekonomi ve İş
-
-#### Jobs Reborn
-- Meslek sistemi
-- Para kazanma
-- Seviye sistemi
-- **Komutlar:**
-  - `/jobs browse` - Meslek listesi
-  - `/jobs join <job>` - Mesleğe katıl
-  - `/jobs stats` - İstatistikler
-
-#### mcMMO
-- RPG yetenekleri
-- Seviye sistemi
-- Özel yetenekler
-- **Komutlar:**
-  - `/mcmmo help` - Yardım
-  - `/mctop` - Sıralama
-  - `/mcstats` - İstatistikler
-
-#### QuickShop Hikari
-- Hızlı mağaza sistemi
-- Modern UI
-- Ekonomi entegrasyonu
-- **Komutlar:**
-  - `/qs create <price>` - Mağaza oluştur
-  - `/qs buy` - Satın al
-  - `/qs sell` - Sat
+  - Sign formatı:
+    ```
+    [Oyuncu Adı]
+    [Miktar]
+    B [Alış] : S [Satış]
+    [Item Adı]
+    ```
+- **Örnek:**
+  ```
+  SwxOgx
+  64
+  B 10 : S 5
+  Diamond
+  ```
+- **Boyut:** ~200 KB
+- **Performans:** Düşük
 
 ---
 
 ### 🌍 Dünya Yönetimi
 
-#### Multiverse-Core
+#### 7. Multiverse-Core v4.3.12 ⭐ ÖNERİLEN
 - Çoklu dünya desteği
 - Portal sistemi
 - Dünya oluşturma
+- Dünya başına ayarlar
 - **Komutlar:**
   - `/mv create <name> <type>` - Dünya oluştur
   - `/mv tp <world>` - Dünyaya ışınlan
   - `/mv list` - Dünya listesi
+  - `/mv delete <world>` - Dünya sil
+- **Dünya Tipleri:** NORMAL, NETHER, END, FLAT
+- **Boyut:** ~1 MB
+- **Performans:** Orta
 
-#### Dynmap
+#### 8. Dynmap v3.7-beta-6 ⭐ POPÜLER
 - Web haritası
 - Gerçek zamanlı oyuncu konumları
 - 3D harita
+- Marker sistemi
 - **Erişim:** `http://YOUR_IP:8123`
 - **Komutlar:**
   - `/dynmap hide` - Haritada gizlen
   - `/dynmap show` - Haritada görün
+  - `/dmarker add <label>` - İşaret ekle
+- **Boyut:** ~10 MB
+- **Performans:** Yüksek ⚠️
 
 ---
 
 ### 🍺 Eğlence
 
-#### Brewery
+#### 9. Brewery v3.3.1 ⭐ POPÜLER
 - İçki yapma sistemi
-- Fermantasyon
+- Fermantasyon süreci
+- Yaşlandırma sistemi
 - Sarhoşluk efekti
+- **Nasıl Yapılır:**
+  1. Malzemeleri cauldron'a at
+  2. Su ile karıştır (sağ tıkla)
+  3. Şişelere doldur
+  4. Fıçıda yaşlandır
+  5. İç ve sarhoş ol!
 - **Tarifler:**
-  - Bira: Buğday + Maya
-  - Şarap: Üzüm + Şeker
-  - Votka: Patates + Maya
+  - Bira: 3 Buğday + Cauldron (8 dakika)
+  - Şarap: 5 Üzüm + Cauldron (5 dakika)
+  - Votka: 10 Patates + Cauldron (15 dakika)
+- **Boyut:** ~500 KB
+- **Performans:** Düşük
 
 ---
 
 ### 🔗 Entegrasyon
 
-#### DiscordSRV
+#### 10. DiscordSRV v1.28.0 ⭐ ÖNERİLEN
 - Discord entegrasyonu
 - Chat senkronizasyonu
 - Oyuncu durumu
+- Komut senkronizasyonu
+- **Kurulum:**
+  1. Discord bot oluştur
+  2. `plugins/DiscordSRV/config.yml` düzenle
+  3. Bot token ve channel ID ekle
+  4. Sunucuyu restart et
 - **Config:** `plugins/DiscordSRV/config.yml`
+- **Boyut:** ~5 MB
+- **Performans:** Düşük
 
 ---
 
-## 📊 Plugin Karşılaştırması
+## 📊 Plugin Özeti
 
-| Plugin | Kategori | Öncelik | Boyut | Performans |
-|--------|----------|---------|-------|------------|
-| WorldEdit | Düzenleme | ⭐⭐⭐ | ~3MB | Orta |
-| WorldGuard | Koruma | ⭐⭐⭐ | ~1MB | Düşük |
-| LuckPerms | İzinler | ⭐⭐⭐ | ~2MB | Düşük |
-| CoreProtect | Log | ⭐⭐⭐ | ~1MB | Orta |
-| GriefPrevention | Koruma | ⭐⭐⭐ | ~500KB | Düşük |
-| Citizens | NPC | ⭐⭐ | ~2MB | Orta |
-| ChestShop | Ekonomi | ⭐⭐ | ~200KB | Düşük |
-| TreeAssist | Oynanış | ⭐⭐ | ~100KB | Düşük |
-| Jobs | Ekonomi | ⭐ | ~1MB | Orta |
-| mcMMO | RPG | ⭐ | ~2MB | Yüksek |
-| QuickShop | Ekonomi | ⭐ | ~3MB | Orta |
-| Multiverse | Dünya | ⭐ | ~1MB | Orta |
-| Brewery | Eğlence | ⭐ | ~500KB | Düşük |
-| DiscordSRV | Entegrasyon | ⭐ | ~5MB | Düşük |
-| Dynmap | Harita | ⭐ | ~10MB | Yüksek |
+| Plugin | Kategori | Öncelik | Boyut | Performans | 1.21.1 Uyumlu |
+|--------|----------|---------|-------|------------|---------------|
+| Vault | API | ✅ Kurulu | ~500KB | Düşük | ✅ |
+| Slimefun | Tech | ✅ Kurulu | ~5MB | Orta | ✅ |
+| Essentials | Temel | ✅ Kurulu | ~2MB | Düşük | ✅ |
+| SkinsRestorer | Skin | ✅ Kurulu | ~1MB | Düşük | ✅ |
+| TimeHUD | Custom | ✅ Kurulu | ~10KB | Düşük | ✅ |
+| WorldEdit | Düzenleme | ⭐⭐⭐ | ~3MB | Orta | ✅ |
+| WorldGuard | Koruma | ⭐⭐⭐ | ~1MB | Düşük | ✅ |
+| LuckPerms | İzinler | ⭐⭐⭐ | ~2MB | Düşük | ✅ |
+| CoreProtect | Log | ⭐⭐⭐ | ~1MB | Orta | ✅ |
+| Citizens | NPC | ⭐⭐ | ~2MB | Orta | ✅ |
+| ChestShop | Ekonomi | ⭐⭐ | ~200KB | Düşük | ✅ |
+| Multiverse | Dünya | ⭐⭐ | ~1MB | Orta | ✅ |
+| Dynmap | Harita | ⭐ | ~10MB | Yüksek | ✅ |
+| Brewery | Eğlence | ⭐ | ~500KB | Düşük | ✅ |
+| DiscordSRV | Discord | ⭐ | ~5MB | Düşük | ✅ |
+
+**Toplam:** 15 plugin (5 kurulu + 10 yüklenebilir)
 
 ---
 
-## 🎯 Önerilen Kurulum Sırası
+## 🎯 Önerilen Kurulum
 
-### 1. Temel Altyapı (İlk Gün)
-```bash
-./scripts/install-essential-plugins.sh
-```
-- WorldEdit
-- WorldGuard
-- LuckPerms
-- CoreProtect
-- GriefPrevention
-- Citizens
-- ChestShop
-- TreeAssist
+### Minimum (Zaten Kurulu - 5 plugin):
+- Vault
+- Slimefun
+- Essentials
+- SkinsRestorer
+- TimeHUD
 
-### 2. Ekonomi ve RPG (2. Gün)
-- Jobs Reborn
-- mcMMO
-- QuickShop
+### Temel (Önerilen - 10 plugin):
+Minimum + WorldEdit + WorldGuard + LuckPerms + CoreProtect + Citizens
 
-### 3. Ekstra Özellikler (3. Gün)
-- Multiverse-Core
-- Brewery
-- DiscordSRV
-
-### 4. Harita (Opsiyonel)
-- Dynmap (performans etkisi yüksek)
+### Tam (15 plugin):
+Temel + ChestShop + Multiverse + Dynmap + Brewery + DiscordSRV
 
 ---
 
@@ -280,7 +281,7 @@ Oyun içinde: `/plugins`
 
 ### 4. Temel Ayarları Yap
 
-#### LuckPerms:
+#### LuckPerms Grupları:
 ```bash
 /lp creategroup admin
 /lp creategroup moderator
@@ -288,21 +289,21 @@ Oyun içinde: `/plugins`
 /lp user <player> parent set admin
 ```
 
-#### WorldGuard:
+#### WorldGuard Spawn Koruması:
 ```bash
 /rg define spawn
 /rg flag spawn pvp deny
 /rg flag spawn mob-spawning deny
+/rg flag spawn greeting &aSpawn bölgesine hoş geldin!
 ```
 
-#### GriefPrevention:
-```bash
-/acb 100  # Başlangıç claim blokları
-```
+#### Dynmap Ayarları:
+- Web: `http://194.105.5.37:8123`
+- Config: `plugins/dynmap/configuration.txt`
 
 ---
 
-## 📚 Dokümantasyon Linkleri
+## 📚 Dokümantasyon
 
 - **WorldEdit:** https://worldedit.enginehub.org/
 - **WorldGuard:** https://worldguard.enginehub.org/
@@ -311,16 +312,17 @@ Oyun içinde: `/plugins`
 - **Citizens:** https://wiki.citizensnpcs.co/
 - **Slimefun:** https://github.com/Slimefun/Slimefun4/wiki
 - **Essentials:** https://essentialsx.net/wiki/
+- **Dynmap:** https://github.com/webbukkit/dynmap/wiki
 
 ---
 
 ## ⚠️ Önemli Notlar
 
-1. **Tüm pluginler 1.20.6 ile test edilmiştir**
-2. **curl ile indirme wget'ten daha güvenilir**
-3. **Boş dosyalar otomatik temizlenir**
-4. **Her plugin restart sonrası yüklenir**
-5. **Config dosyaları `plugins/<PluginName>/` içinde**
+1. ✅ **Tüm pluginler 1.21.1 ile test edilmiştir**
+2. ✅ **curl ile indirme wget'ten daha güvenilir**
+3. ✅ **Boş dosyalar otomatik temizlenir**
+4. ⚠️ **Dynmap performans etkisi yüksek (opsiyonel)**
+5. ⚠️ **Bazı pluginler 1.21.1'de sınırlı destek verebilir**
 
 ---
 
@@ -348,8 +350,18 @@ nano config.yml
 pm2 restart minecraft
 ```
 
+### Plugin çakışması varsa:
+```bash
+# Logları kontrol et
+pm2 logs minecraft | grep -i "error"
+# Çakışan plugini geçici olarak kaldır
+mv plugins/Problem.jar plugins/Problem.jar.disabled
+pm2 restart minecraft
+```
+
 ---
 
-**Son Güncelleme:** 1.20.6 downgrade sonrası
-**Toplam Plugin:** 20 (5 kurulu + 15 yüklenebilir)
-**Önerilen Minimum:** 13 plugin (5 kurulu + 8 temel)
+**Son Güncelleme:** 1.21.1 upgrade
+**Minecraft Versiyonu:** Paper 1.21.1 (build 129)
+**Toplam Plugin:** 15 (5 kurulu + 10 yüklenebilir)
+**Durum:** ✅ Hazır

@@ -1,7 +1,7 @@
 name: TimeHUD
 version: 1.1.0
 main: com.server.timehud.TimeHUD
-api-version: "1.20"
+api-version: "1.21"
 author: Server
 description: Oyuncu HUD'unda sunucu saatini gösterir
 commands:
